@@ -12,6 +12,6 @@ router.post("/uploadLocation", singleUpload, adminAPI.uploadLocation);
 router.post("/uploadMap", singleUpload, adminAPI.uploadMap);
 
 router.delete("/deleteLocation/:locationId", adminAPI.deleteLocation);
-router.delete("/deleteMap/:mapId", adminAPI.deleteMap);
+router.delete("/deleteMapandLocations/:mapId", adminAPI.deleteMapandLocations);
 
 module.exports = router;

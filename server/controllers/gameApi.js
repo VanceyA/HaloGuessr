@@ -123,3 +123,5 @@ class gameAPI {
         }
     }
 }
+
+module.exports = gameAPI;

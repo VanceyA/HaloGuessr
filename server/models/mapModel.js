@@ -24,6 +24,11 @@ const locationSchema = Schema({
     x: { type: Number, required: true },
     y: { type: Number, required: true },
     map: { type: Schema.Types.ObjectId, ref: 'Map', required: true },
+    difficulty: { 
+        type: String,
+        required: true,
+        enum: ['Easy', 'Normal', 'Heroic', 'Legendary']
+    },
 }, {
     toJSON: {
         versionKey: false,

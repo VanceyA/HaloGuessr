@@ -45,7 +45,8 @@ class adminAPI {
                 image: imageName,
                 x: req.body.x,
                 y: req.body.y,
-                map: req.body.map
+                map: req.body.map,
+                difficulty: req.body.difficulty
             });
             await location.save();
 
@@ -92,7 +93,7 @@ class adminAPI {
             });
             await map.save();
 
-            const haloGame = await HaloGame.findOne({ _id: req.body.map });
+            const haloGame = await HaloGame.findOne({ _id: req.body.haloGame });
             haloGame.maps.push(map._id);
             await haloGame.save();
 
@@ -145,16 +146,14 @@ class adminAPI {
         }
     }
 
-
-    static async deleteMap(req, res) {
+// Delete map and all locations associated with it
+    static async deleteMapandLocations(req, res) {
         try {
             const map = await Map.findOne({ _id: req.params.mapId });
             if (!map) {
                 return res.status(404).send("Map not found");
             }
-            const haloGame = await HaloGame.findOne({ _id: map.halo_game });
-            haloGame.maps.remove(map._id);
-            await haloGame.save();
+            
 
             const params = {
                 Bucket: bucketName,
@@ -163,8 +162,18 @@ class adminAPI {
             const command = new DeleteObjectCommand(params);
             await s3.send(command);
 
+            const haloGame = await HaloGame.findOne({ _id: map.halo_game });
+            haloGame.maps.remove(map._id);
+
+            const mapId = map._id;
+
             await Map.deleteOne({ _id: req.params.mapId });
-            return res.status(201).json();
+
+            await Location.deleteMany({ map: mapId });
+
+            await haloGame.save();
+
+            return res.status(201).send("Map deleted.");
         } catch (err) {
             if (err.errors) {
                 var errorMessages = {};
@@ -178,3 +187,5 @@ class adminAPI {
         }
     }
 }
+
+module.exports = adminAPI;
