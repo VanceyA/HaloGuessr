@@ -2,12 +2,15 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const session = require('express-session');
+const bodyParser = require('body-parser');
 require('dotenv').config();
+
 
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 
 app.use(express.static("public"));
 app.use(session({
@@ -22,6 +25,7 @@ const port = process.env.PORT || 8080;
 
 
 app.use("/api/game", require("./routes/gameRoutes"));
+app.use("/api/admin", require("./routes/adminRoutes"));
 // app.use("/api/user", require("./routes/userRoutes"));
 
 

@@ -107,15 +107,24 @@ class gameAPI {
             const gameId = req.session.gameId;
             const gameSession = await GameSession.findOne({ _id: gameId });
             const roundNumber = gameSession.roundNumber;
-            const location = await Location.findById(gameSession.locations[roundNumber]);
+            const location = await Location.findOne({ _id: gameSession.locations[roundNumber]})
+            .populate("map")
+            .exec();
             // send picture of location and map image (can't just be link to s3)
 
-            const getObjectParams = {
-                Bucket: bucketName,
-                Key: location.image
-            }
-            const command = new GetObjectCommand(getObjectParams);
-            const url = await getSignedUrl(s3, command, { expiresIn: 3600 });
+            const locationUrl = getSignedUrl({
+                url: "https://d7y0fjouo6hu5.cloudfront.net/" + location.image,
+                dateLessThan: new Date(Date.now() + 1000 * 60 * 60),
+                privateKey: process.env.CLOUDFRONT_PRIVATE_KEY,
+                keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID
+            });
+
+            const mapUrl = getSignedUrl({
+                url: "https://d7y0fjouo6hu5.cloudfront.net/" + location.map.image,
+                dateLessThan: new Date(Date.now() + 1000 * 60 * 60),
+                privateKey: process.env.CLOUDFRONT_PRIVATE_KEY,
+                keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID
+            });
             
             res.status(201).json();
         } catch (err) {

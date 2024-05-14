@@ -10,6 +10,7 @@ const singleUpload = upload.single('image');
 
 router.post("/uploadLocation", singleUpload, adminAPI.uploadLocation);
 router.post("/uploadMap", singleUpload, adminAPI.uploadMap);
+router.post("/testImage", adminAPI.testImage);
 
 router.delete("/deleteLocation/:locationId", adminAPI.deleteLocation);
 router.delete("/deleteMapandLocations/:mapId", adminAPI.deleteMapandLocations);

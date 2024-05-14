@@ -7,7 +7,7 @@ router.post("/start", gameAPI.startGame);
 router.patch("/guess", gameAPI.submitGuess);
 router.get("/next", gameAPI.nextRound);
 
-router.patch("/finish", gameAPI.finishGame);
+// router.patch("/finish", gameAPI.finishGame);
 
 
 

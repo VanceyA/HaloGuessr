@@ -1,6 +1,8 @@
 const { Map, Location, HaloGame } = require('../models/mapModel');
 
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
+const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { CloudFrontClient, CreateInvalidationCommand } = require("@aws-sdk/client-cloudfront");
 const sharp = require("sharp");
 
 
@@ -12,6 +14,7 @@ const bucketName = process.env.BUCKET_NAME;
 const bucketRegion = process.env.BUCKET_REGION;
 const accessKey = process.env.ACCESS_KEY;
 const secretAccessKey = process.env.SECRET_ACCESS_KEY;
+const cloudFrontDistId = process.env.CLOUD_FRONT_DIST_ID;
 
 const s3 = new S3Client({
     credentials: {
@@ -19,6 +22,13 @@ const s3 = new S3Client({
         secretAccessKey: secretAccessKey
     },
     region: bucketRegion
+});
+
+const cloudFront = new CloudFrontClient({
+    credentials: {
+        accessKeyId: accessKey,
+        secretAccessKey: secretAccessKey
+    }
 });
 
 class adminAPI {
@@ -68,11 +78,22 @@ class adminAPI {
         }
     }
 
+    static async testImage(req, res) {
+        // const url = "https://d7y0fjouo6hu5.cloudfront.net/" + req.body.imageName;
+        const url = getSignedUrl({
+            url: "https://d7y0fjouo6hu5.cloudfront.net/" + req.body.imageName,
+            dateLessThan: new Date(Date.now() + 1000 * 60 * 60),
+            privateKey: process.env.CLOUDFRONT_PRIVATE_KEY,
+            keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID
+        });
+        return res.status(201).send(`url: ${url}`);
+    }
+
     static async uploadMap(req, res) {
         try {
             const buffer = await sharp(req.file.buffer).resize({ width: 1920, height: 1080, fit: 'fill' }).toBuffer()
 
-            const imageName = randomImageName(req.file.originalname);
+            const imageName = randomImageName(req.file.originalname).replace(/ /g,"_");
 
             const params = {
                 Bucket: bucketName,
@@ -87,15 +108,13 @@ class adminAPI {
 
             const map = await Map.create({
                 image: imageName,
-                x: req.body.x,
-                y: req.body.y,
-                map: req.body.map
+                name: req.body.name
             });
             await map.save();
 
-            const haloGame = await HaloGame.findOne({ _id: req.body.haloGame });
-            haloGame.maps.push(map._id);
-            await haloGame.save();
+            // const haloGame = await HaloGame.findOne({ _id: req.body.haloGame });
+            // haloGame.maps.push(map._id);
+            // await haloGame.save();
 
             return res.status(201).json();
         } catch (err) {
@@ -119,10 +138,8 @@ class adminAPI {
                 return res.status(404).send("Location not found");
             }
 
-            const map = await Map.findOne({ _id: location.map });
-            map.locations.remove(location._id);
-            await map.save();
-
+            
+            // Delete image from s3
             const params = {
                 Bucket: bucketName,
                 Key: location.image
@@ -130,7 +147,27 @@ class adminAPI {
             const command = new DeleteObjectCommand(params);
             await s3.send(command);
 
+            // Invalidate cloudfront cache
+            const invalidationParams = {
+                DistributionId: cloudFrontDistId,
+                InvalidationBatch: {
+                    CallerReference: map.image,
+                    Paths: {
+                        Quantity: 1,
+                        Items: ["/" + map.image]
+                    }
+                }
+            };
 
+            const invalidationCommand = new CreateInvalidationCommand(invalidationParams);
+            await cloudFront.send(invalidationCommand);
+
+            // Delete location from map
+            const map = await Map.findOne({ _id: location.map });
+            map.locations.remove(location._id);
+            await map.save();
+
+            // Delete location
             await Location.deleteOne({ _id: req.params.locationId });
             return res.status(201).json();
         } catch (err) {
@@ -146,7 +183,7 @@ class adminAPI {
         }
     }
 
-// Delete map and all locations associated with it
+    // Delete map and all locations associated with it
     static async deleteMapandLocations(req, res) {
         try {
             const map = await Map.findOne({ _id: req.params.mapId });
@@ -161,6 +198,26 @@ class adminAPI {
             };
             const command = new DeleteObjectCommand(params);
             await s3.send(command);
+
+            // Invalidate cloudfront cache
+
+            const invalidationParams = {
+                DistributionId: cloudFrontDistId,
+                InvalidationBatch: {
+                    CallerReference: map.image,
+                    Paths: {
+                        Quantity: 1,
+                        Items: ["/" + map.image]
+                    }
+                }
+            };
+
+            const invalidationCommand = new CreateInvalidationCommand(invalidationParams);
+            await cloudFront.send(invalidationCommand);
+
+
+
+
 
             const haloGame = await HaloGame.findOne({ _id: map.halo_game });
             haloGame.maps.remove(map._id);
