@@ -62,15 +62,23 @@ class gameAPI {
 
             // finish game logic
             let score = 0;
+            const maxScore = 1000;
+            const threshold = 2;
+            const maxDiff = 10;
             const guessX = req.body.guessX;
             const guessY = req.body.guessY;
+            const targetX = location.x;
+            const targetY = location.y;
 
-            // Jon's score logic here
-            
+            const diff = Math.abs(guessX - targetX) + Math.abs(guessY - targetY);
 
+            if (diff <= threshold) {
+                score = maxScore;
+            } else {
+                score = Math.max(0, maxScore - (diff * (maxScore / (4 * maxDiff))));
+            }
 
-
-
+            // update score
             gameSession.score += score;
 
             // end guess, increase rounds completed
