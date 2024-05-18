@@ -3,22 +3,7 @@ const { Map, Location } = require('../models/mapModel');
 const { Leaderboard } = require('../models/leaderboardModel');
 const { User } = require('../models/userModel');
 
-const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
-const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
-
-const bucketName = process.env.BUCKET_NAME;
-const bucketRegion = process.env.BUCKET_REGION;
-const accessKey = process.env.ACCESS_KEY;
-const secretAccessKey = process.env.SECRET_ACCESS_KEY;
-
-const s3 = new S3Client({
-    credentials: {
-        accessKeyId: accessKey,
-        secretAccessKey: secretAccessKey
-    },
-    region: bucketRegion
-});
-
+const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
 
 async function finishGame(req, res, gameSession) {
     if (gameSession.roundsCompleted >= 5) {
