@@ -112,9 +112,9 @@ class adminAPI {
             });
             await map.save();
 
-            // const haloGame = await HaloGame.findOne({ _id: req.body.haloGame });
-            // haloGame.maps.push(map._id);
-            // await haloGame.save();
+            const haloGame = await HaloGame.findOne({ _id: req.body.haloGame });
+            haloGame.maps.push(map._id);
+            await haloGame.save();
 
             return res.status(201).json();
         } catch (err) {
