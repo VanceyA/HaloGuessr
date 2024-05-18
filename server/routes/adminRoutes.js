@@ -8,11 +8,14 @@ const upload = multer({ storage: storage });
 
 const singleUpload = upload.single('image');
 
-router.post("/uploadLocation", singleUpload, adminAPI.uploadLocation);
-router.post("/uploadMap", singleUpload, adminAPI.uploadMap);
-router.post("/testImage", adminAPI.testImage);
+router.get("/maps", adminAPI.getMaps);
 
-router.delete("/deleteLocation/:locationId", adminAPI.deleteLocation);
-router.delete("/deleteMapandLocations/:mapId", adminAPI.deleteMapandLocations);
+
+router.post("/locations", singleUpload, adminAPI.uploadLocation);
+router.post("/maps", singleUpload, adminAPI.uploadMap);
+
+
+router.delete("/locations/:locationId", adminAPI.deleteLocation);
+router.delete("/maps/:mapId", adminAPI.deleteMapandLocations);
 
 module.exports = router;

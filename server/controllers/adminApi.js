@@ -32,6 +32,25 @@ const cloudFront = new CloudFrontClient({
 });
 
 class adminAPI {
+
+    // Get all maps
+    static async getMaps(req, res) {
+        try {
+            const maps = await Map.find();
+            res.status(200).json(maps);
+        } catch (err) {
+            if (err.errors) {
+                var errorMessages = {};
+                for (var fieldName in err.errors) {
+                    errorMessages[fieldName] = err.errors[fieldName].message;
+                }
+                return res.status(422).json(errorMessages);
+            } else {
+                return res.status(500).send("Unknown server error");
+            }
+        }
+    }
+
     static async uploadLocation(req, res) {
         console.log("req.body", req.body);
         console.log("req.file", req.file);
@@ -78,17 +97,6 @@ class adminAPI {
         }
     }
 
-    static async testImage(req, res) {
-        // const url = "https://d7y0fjouo6hu5.cloudfront.net/" + req.body.imageName;
-        const url = getSignedUrl({
-            url: "https://d7y0fjouo6hu5.cloudfront.net/" + req.body.imageName,
-            dateLessThan: new Date(Date.now() + 1000 * 60 * 60),
-            privateKey: process.env.CLOUDFRONT_PRIVATE_KEY,
-            keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID
-        });
-        return res.status(201).send(`url: ${url}`);
-    }
-
     static async uploadMap(req, res) {
         try {
             const buffer = await sharp(req.file.buffer).resize({ width: 1920, height: 1080, fit: 'fill' }).toBuffer()
@@ -133,7 +141,8 @@ class adminAPI {
 
     static async deleteLocation(req, res) {
         try {
-            const location = await Location.findOne({ _id: req.params.locationId });
+            const locationId = req.params.locationId;
+            const location = await Location.findOne({ _id: locationId });
             if (!location) {
                 return res.status(404).send("Location not found");
             }
@@ -168,7 +177,7 @@ class adminAPI {
             await map.save();
 
             // Delete location
-            await Location.deleteOne({ _id: req.params.locationId });
+            await Location.deleteOne({ _id: locationId });
             return res.status(201).json();
         } catch (err) {
             if (err.errors) {
@@ -186,7 +195,8 @@ class adminAPI {
     // Delete map and all locations associated with it
     static async deleteMapandLocations(req, res) {
         try {
-            const map = await Map.findOne({ _id: req.params.mapId });
+            const mapId = req.params.mapId;
+            const map = await Map.findOne({ _id: mapId });
             if (!map) {
                 return res.status(404).send("Map not found");
             }
@@ -222,9 +232,7 @@ class adminAPI {
             const haloGame = await HaloGame.findOne({ _id: map.halo_game });
             haloGame.maps.remove(map._id);
 
-            const mapId = map._id;
-
-            await Map.deleteOne({ _id: req.params.mapId });
+            await Map.deleteOne({ _id: mapId });
 
             await Location.deleteMany({ map: mapId });
 

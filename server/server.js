@@ -24,7 +24,7 @@ mongoose.connect(process.env.MONGO_URI);
 const port = process.env.PORT || 8080;
 
 
-app.use("/api/game", require("./routes/gameRoutes"));
+app.use("/api/games", require("./routes/gameRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
 // app.use("/api/user", require("./routes/userRoutes"));
 

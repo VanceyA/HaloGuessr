@@ -35,14 +35,41 @@ class gameAPI {
         try {
             const locations = await Location.aggregate([
                 { $sample: { size: 5 } }
-            ])
+            ]);
+
+            if (locations.length < 5) {
+                return res.status(500).send("Locations not generated properly. Please try again.");
+            }
 
             const gameSession = await GameSession.create({
                 locations: locations.map(location => location._id),
             });
             await gameSession.save();
             req.session.gameId = gameSession._id;
+
+            const location = gameSession.locations[0];
+
+            const map = await Map.findOne({ _id: location.map });
+
+            const locationUrl = getSignedUrl({
+                url: "https://d7y0fjouo6hu5.cloudfront.net/" + location.image,
+                dateLessThan: new Date(Date.now() + 1000 * 60 * 60),
+                privateKey: process.env.CLOUDFRONT_PRIVATE_KEY,
+                keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID
+            });
+
+            const mapUrl = getSignedUrl({
+                url: "https://d7y0fjouo6hu5.cloudfront.net/" + map.image,
+                dateLessThan: new Date(Date.now() + 1000 * 60 * 60),
+                privateKey: process.env.CLOUDFRONT_PRIVATE_KEY,
+                keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID
+            });
+
+
             return res.status(201).json({
+                startGame: true,
+                locationUrl: locationUrl,
+                mapUrl: mapUrl,
                 gameSessionId: gameSession._id
             });
         } catch (err) {
@@ -60,13 +87,23 @@ class gameAPI {
 
     static async submitGuess(req, res) {
         const gameId = req.session.gameId;
+        const reqRoundNumber = req.params.roundNumber;
         try {
             const gameSession = await GameSession.findOne({ _id: gameId });
             if (!gameSession) {
                 return res.status(404).send("Game not found");
             }
             const roundsCompleted = gameSession.roundsCompleted;
+
+            if (reqRoundNumber != roundsCompleted) {
+                return res.status(404).send("Round number not found");
+            }
+
             const location = await Location.findById(gameSession.locations[roundsCompleted]);
+            
+            if (!location) {
+                return res.status(404).send("Location not found");
+            }
 
             // finish game logic
             let score = 0;
@@ -111,15 +148,29 @@ class gameAPI {
     }
 
     static async nextRound(req, res) {
+        const gameId = req.session.gameId;
+        const reqRoundNumber = req.params.roundNumber;
         try {
-            const gameId = req.session.gameId;
             const gameSession = await GameSession.findOne({ _id: gameId });
+            if (!gameSession) {
+                return res.status(404).send("Game not found");
+            }
+
             const roundsCompleted = gameSession.roundsCompleted;
+
+            if (reqRoundNumber != roundsCompleted) {
+                return res.status(404).send("Round number not found");
+            }
+
             await finishGame(req, res, gameSession);
+
             const location = await Location.findOne({ _id: gameSession.locations[roundsCompleted]})
             .populate("map")
             .exec();
-            // send picture of location and map image (can't just be link to s3)
+            
+            if (!location) {
+                return res.status(404).send("Location not found");
+            }
 
             const locationUrl = getSignedUrl({
                 url: "https://d7y0fjouo6hu5.cloudfront.net/" + location.image,
@@ -134,8 +185,13 @@ class gameAPI {
                 privateKey: process.env.CLOUDFRONT_PRIVATE_KEY,
                 keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID
             });
+
+            const data = {
+                locationUrl: locationUrl,
+                mapUrl: mapUrl
+            }
             
-            res.status(201).json();
+            res.status(201).json(data);
         } catch (err) {
             if (err.errors) {
                 var errorMessages = {};

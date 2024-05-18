@@ -3,9 +3,9 @@ const router = express.Router();
 const gameAPI = require('../controllers/gameApi');
 
 
-router.post("/start", gameAPI.startGame);
-router.patch("/guess", gameAPI.submitGuess);
-router.get("/next", gameAPI.nextRound);
+router.post("/", gameAPI.startGame);
+router.post("/rounds/:roundNumber/guesses", gameAPI.submitGuess);
+router.get("/rounds/:roundNumber", gameAPI.nextRound);
 
 
 

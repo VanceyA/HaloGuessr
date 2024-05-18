@@ -28,7 +28,7 @@ const locationSchema = Schema({
     difficulty: { 
         type: String,
         required: true,
-        enum: ['Easy', 'Normal', 'Heroic', 'Legendary', 'Laso']
+        enum: ['Easy', 'Normal', 'Heroic', 'Legendary', 'LASO']
     },
 }, {
     toJSON: {
