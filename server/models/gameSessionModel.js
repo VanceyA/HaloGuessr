@@ -6,6 +6,7 @@ const gameSessionSchema = Schema({
   locations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Location', required: true }],
   startTime: { type: Date, default: Date.now },
   score: { type: Number, default: 0 },
+  isFinished: { type: Boolean, default: false }
 });
 
 const GameSession = mongoose.model('GameSession', gameSessionSchema);

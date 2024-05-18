@@ -20,6 +20,14 @@ const s3 = new S3Client({
 });
 
 
+async function finishGame(req, res, gameSession) {
+    if (gameSession.roundsCompleted >= 5) {
+        gameSession.isFinished = true;
+        await gameSession.save();
+        return res.status(201).json({});
+    }
+}
+
 class gameAPI {
 
     // Called when a new game is started
@@ -57,8 +65,8 @@ class gameAPI {
             if (!gameSession) {
                 return res.status(404).send("Game not found");
             }
-            const roundNumber = gameSession.roundNumber;
-            const location = await Location.findById(gameSession.locations[roundNumber]);
+            const roundsCompleted = gameSession.roundsCompleted;
+            const location = await Location.findById(gameSession.locations[roundsCompleted]);
 
             // finish game logic
             let score = 0;
@@ -106,8 +114,9 @@ class gameAPI {
         try {
             const gameId = req.session.gameId;
             const gameSession = await GameSession.findOne({ _id: gameId });
-            const roundNumber = gameSession.roundNumber;
-            const location = await Location.findOne({ _id: gameSession.locations[roundNumber]})
+            const roundsCompleted = gameSession.roundsCompleted;
+            await finishGame(req, res, gameSession);
+            const location = await Location.findOne({ _id: gameSession.locations[roundsCompleted]})
             .populate("map")
             .exec();
             // send picture of location and map image (can't just be link to s3)

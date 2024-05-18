@@ -11,8 +11,9 @@ const HaloGame = mongoose.model('HaloGame', haloGameSchema);
 const mapSchema = Schema({
     name: { type: String, required: true, unique: true },
     image: { type: String, required: true },
+    type: { type: String, required: true },
     locations: [{ type: Schema.Types.ObjectId, ref: 'Location' }],
-    // halo_game: { type: Schema.Types.ObjectId, ref: 'HaloGame', required: true },
+    halo_game: { type: Schema.Types.ObjectId, ref: 'HaloGame', required: true },
 });
 
 const Map = mongoose.model('Map', mapSchema);
@@ -27,7 +28,7 @@ const locationSchema = Schema({
     difficulty: { 
         type: String,
         required: true,
-        enum: ['Easy', 'Normal', 'Heroic', 'Legendary']
+        enum: ['Easy', 'Normal', 'Heroic', 'Legendary', 'Laso']
     },
 }, {
     toJSON: {
