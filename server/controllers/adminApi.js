@@ -1,7 +1,6 @@
 const { Map, Location, HaloGame } = require('../models/mapModel');
 
-const { getSignedUrl } = require("@aws-sdk/cloudfront-signer");
-const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { CloudFrontClient, CreateInvalidationCommand } = require("@aws-sdk/client-cloudfront");
 const sharp = require("sharp");
 
@@ -98,6 +97,8 @@ class adminAPI {
     }
 
     static async uploadMap(req, res) {
+        console.log("req.body", req.body);
+        console.log("req.file", req.file);
         try {
             const buffer = await sharp(req.file.buffer).resize({ width: 1920, height: 1080, fit: 'fill' }).toBuffer()
 

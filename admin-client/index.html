@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Page</title>
+</head>
+<body>
+    <h1>Admin Page</h1>
+
+    <!-- Form to upload maps -->
+    <section>
+        <h2>Upload Map</h2>
+        <form id="mapForm">
+            <label for="mapName">Map Name:</label>
+            <input type="text" id="mapName" name="name" required>
+            <br>
+
+            <label for="mapImage">Map Image:</label>
+            <input type="file" id="mapImage" name="image" required>
+            <br>
+
+            <label for="mapType">Map Type:</label>
+            <select id="mapType" name="type" required>
+                <option value="Multiplayer">Multiplayer</option>
+                <option value="Campaign">Campaign</option>
+            </select>
+            <br>
+
+            <label for="haloGameId">Halo Game ID:</label>
+            <select id="haloGameId" name="halo_game" required>
+                <option value="1">Halo: Combat Evolved</option>
+                <option value="2">Halo 2</option>
+                <option value="3">Halo 3</option>
+                <option value="4">Halo 3: ODST</option>
+                <option value="5">Halo: Reach</option>
+                <option value="6">Halo 4</option>
+                <option value="7">Halo 5: Guardians</option>
+                <option value="8">Halo Infinite</option>
+            </select>
+            <br>
+
+            <button type="submit">Upload Map</button>
+        </form>
+    </section>
+
+
+    <!-- Form to upload locations (only if a campaign exists) -->
+    <!--
+    <section>
+        <h2>Upload Location</h2>
+        <form id="locationForm">
+            <label for="locationImage">Location Image:</label>
+            <input type="file" id="locationImage" name="image" required>
+            <br>
+
+            <label for="locationX">X Coordinate:</label>
+            <input type="number" id="locationX" name="x" required>
+            <br>
+
+            <label for="locationY">Y Coordinate:</label>
+            <input type="number" id="locationY" name="y" required>
+            <br>
+
+            <label for="mapId">Map ID:</label>
+            <input type="text" id="mapId" name="map" required>
+            <br>
+
+            <label for="locationDifficulty">Difficulty:</label>
+            <select id="locationDifficulty" name="difficulty" required>
+                <option value="Easy">Easy</option>
+                <option value="Normal">Normal</option>
+                <option value="Heroic">Heroic</option>
+                <option value="Legendary">Legendary</option>
+                <option value="LASO">LASO</option>
+            </select>
+            <br>
+
+            <button type="submit">Upload Location</button>
+        </form>
+    </section>
+    -->
+
+    <script>
+        // Handle map form submission
+        document.getElementById('mapForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData();
+            console.log("document.getElementById('mapName').value", document.getElementById('mapName').value);
+            formData.append('name', document.getElementById('mapName').value);
+            console.log("document.getElementById('mapImage').files[0]", document.getElementById('mapImage').files[0]);
+            formData.append('image', document.getElementById('mapImage').files[0]);
+            console.log("document.getElementById('mapType').value", document.getElementById('mapType').value);
+            formData.append('type', document.getElementById('mapType').value);
+            console.log("document.getElementById('haloGameId').value", document.getElementById('haloGameId').value);
+            formData.append('halo_game', document.getElementById('haloGameId').value);
+
+            for (const pair of formData.entries()) {
+                console.log(pair[0] + ', ' + pair[1]);
+            }
+            // const response = await fetch('http://localhost:8080/api/admin/maps', {
+            //     method: 'POST',
+            //     body: formData,
+            // });
+            // const result = await response.json();
+            // alert(`Map uploaded: ${result.name}`);
+        });
+
+        // Handle location form submission
+        // document.getElementById('locationForm').addEventListener('submit', async (event) => {
+        //     event.preventDefault();
+        //     const formData = new FormData(event.target);
+        //     const response = await fetch('http://localhost:8080/api/admin/locations', {
+        //         method: 'POST',
+        //         body: formData,
+        //     });
+        //     const result = await response.json();
+        //     alert(`Location uploaded: ${result.image}`);
+        // });
+    </script>
+</body>
+</html>

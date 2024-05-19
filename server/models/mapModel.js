@@ -11,7 +11,11 @@ const HaloGame = mongoose.model('HaloGame', haloGameSchema);
 const mapSchema = Schema({
     name: { type: String, required: true, unique: true },
     image: { type: String, required: true },
-    type: { type: String, required: true },
+    type: { 
+        type: String,
+        required: true,
+        enum: ['Multiplayer', 'Campaign']
+    },
     locations: [{ type: Schema.Types.ObjectId, ref: 'Location' }],
     halo_game: { type: Schema.Types.ObjectId, ref: 'HaloGame', required: true },
 });
