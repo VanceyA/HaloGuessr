@@ -1,19 +1,20 @@
 import { defineEventHandler, readBody } from 'h3'
-import fs from 'fs/promises'
-import path from 'path'
-
-const dataPath = path.join(process.cwd(), 'data/screenshots.json')
+import { Redis } from '@upstash/redis'
 
 export default defineEventHandler(async (event) => {
   try {
+    const config = useRuntimeConfig()
+    const redis = new Redis({
+      url: config.upstashRedisUrl,
+      token: config.upstashRedisToken,
+    })
     const body = await readBody(event)
     const { id, guess } = body
-    const data = await fs.readFile(dataPath, 'utf8')
-    const screenshots = JSON.parse(data)
-    const screenshot = screenshots.find((s: { id: any }) => s.id === id)
-    if (!screenshot) {
+    const screenshotStr = await redis.get(`screenshot:${id}`)
+    if (!screenshotStr) {
       return { error: 'Screenshot not found' }
     }
+    const screenshot = JSON.parse(screenshotStr as string)
     const distance = Math.sqrt(
       Math.pow(guess.x - screenshot.location.x, 2) +
       Math.pow(guess.y - screenshot.location.y, 2)

@@ -1,22 +1,27 @@
 import { defineEventHandler } from 'h3'
-import fs from 'fs/promises'
-import path from 'path'
-
-const dataPath = path.join(process.cwd(), 'data/screenshots.json')
+import { Redis } from '@upstash/redis'
 
 export default defineEventHandler(async () => {
   try {
-    const data = await fs.readFile(dataPath, 'utf8')
-    const screenshots = JSON.parse(data)
-    if (screenshots.length === 0) {
+    const config = useRuntimeConfig()
+    const redis = new Redis({
+      url: config.upstashRedisUrl,
+      token: config.upstashRedisToken,
+    })
+    const keys = await redis.keys('screenshot:*')
+    if (keys.length === 0) {
       return { error: 'No screenshots available' }
     }
-    const randomIndex = Math.floor(Math.random() * screenshots.length)
-    const screenshot = screenshots[randomIndex]
+    const randomKey = keys[Math.floor(Math.random() * keys.length)]
+    const screenshotStr = await redis.get(randomKey)
+    if (!screenshotStr) {
+      return { error: 'Screenshot not found' }
+    }
+    const screenshot = JSON.parse(screenshotStr as string)
     return {
       id: screenshot.id,
-      screenshotPath: screenshot.screenshotPath, // Vercel Blob URL
-      mapPath: screenshot.mapPath, // Vercel Blob URL
+      screenshotPath: screenshot.screenshotPath,
+      mapPath: screenshot.mapPath,
       mapName: screenshot.mapName
     }
   } catch (error) {

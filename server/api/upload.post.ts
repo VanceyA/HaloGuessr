@@ -1,9 +1,15 @@
 import { defineEventHandler, readMultipartFormData } from 'h3'
 import { put } from '@vercel/blob'
+import { Redis } from '@upstash/redis'
 import { nanoid } from 'nanoid'
 
 export default defineEventHandler(async (event) => {
   try {
+    const config = useRuntimeConfig()
+    const redis = new Redis({
+      url: config.upstashRedisUrl,
+      token: config.upstashRedisToken,
+    })
     const formData = await readMultipartFormData(event)
     if (!formData) {
       return { error: 'No form data' }
@@ -25,10 +31,12 @@ export default defineEventHandler(async (event) => {
     }
     const id = nanoid()
     const screenshotBlob = await put(`screenshots/${id}_${screenshotFile.filename}`, screenshotFile.data, {
-      access: 'public'
+      access: 'public',
+      token: config.blobReadWriteToken
     })
     const mapBlob = await put(`maps/${id}_${mapFile.filename}`, mapFile.data, {
-      access: 'public'
+      access: 'public',
+      token: config.blobReadWriteToken
     })
     const metadata = {
       id,
@@ -37,13 +45,8 @@ export default defineEventHandler(async (event) => {
       mapName,
       location: { x: parseFloat(x), y: parseFloat(y) }
     }
-    // Note: Cannot write to screenshots.json at runtime on Vercel
-    return {
-      success: true,
-      id,
-      metadata,
-      warning: 'Metadata not saved. Manually add the following to data/screenshots.json and redeploy:\n' + JSON.stringify(metadata, null, 2)
-    }
+    await redis.set(`screenshot:${id}`, JSON.stringify(metadata))
+    return { success: true, id }
   } catch (error) {
     console.error(error)
     return { error: 'Failed to upload' }

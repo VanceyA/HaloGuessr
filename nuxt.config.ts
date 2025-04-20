@@ -8,6 +8,8 @@ export default defineNuxtConfig({
     preset: 'vercel' // Optimize for Vercel
   },
   runtimeConfig: {
-    blobReadWriteToken: process.env.BLOB_READ_WRITE_TOKEN // Expose Blob token to server
+    upstashRedisUrl: process.env.UPSTASH_REDIS_REST_URL,
+    upstashRedisToken: process.env.UPSTASH_REDIS_REST_TOKEN,
+    blobReadWriteToken: process.env.BLOB_READ_WRITE_TOKEN
   }
 })

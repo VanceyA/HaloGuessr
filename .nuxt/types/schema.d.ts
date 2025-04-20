@@ -77,6 +77,10 @@ declare module 'nuxt/schema' {
       cdnURL: string,
    },
 
+   upstashRedisUrl: string,
+
+   upstashRedisToken: string,
+
    blobReadWriteToken: string,
 
    nitro: {

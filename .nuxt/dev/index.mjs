@@ -1,10 +1,10 @@
 import process from 'node:process';globalThis._importMeta_={url:import.meta.url,env:process.env};import { tmpdir } from 'node:os';
 import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, getRequestURL, getResponseHeader, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, createError, getRouterParam, readBody, getQuery as getQuery$1, readMultipartFormData, getResponseStatusText } from 'file:///Users/vanceandersen/Desktop/Projects/HaloGuessr/node_modules/h3/dist/index.mjs';
 import { Server } from 'node:http';
-import path, { resolve, dirname, join } from 'node:path';
+import { resolve, dirname, join } from 'node:path';
 import nodeCrypto from 'node:crypto';
 import { parentPort, threadId } from 'node:worker_threads';
-import fs, { readFile } from 'node:fs/promises';
+import { Redis } from 'file:///Users/vanceandersen/Desktop/Projects/HaloGuessr/node_modules/@upstash/redis/nodejs.mjs';
 import { put } from 'file:///Users/vanceandersen/Desktop/Projects/HaloGuessr/node_modules/@vercel/blob/dist/index.js';
 import { nanoid } from 'file:///Users/vanceandersen/Desktop/Projects/HaloGuessr/node_modules/nanoid/index.js';
 import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file:///Users/vanceandersen/Desktop/Projects/HaloGuessr/node_modules/vue-bundle-renderer/dist/runtime.mjs';
@@ -25,6 +25,7 @@ import defu, { defuFn } from 'file:///Users/vanceandersen/Desktop/Projects/HaloG
 import { snakeCase } from 'file:///Users/vanceandersen/Desktop/Projects/HaloGuessr/node_modules/scule/dist/index.mjs';
 import { getContext } from 'file:///Users/vanceandersen/Desktop/Projects/HaloGuessr/node_modules/unctx/dist/index.mjs';
 import { toRouteMatcher, createRouter } from 'file:///Users/vanceandersen/Desktop/Projects/HaloGuessr/node_modules/radix3/dist/index.mjs';
+import { readFile } from 'node:fs/promises';
 import consola, { consola as consola$1 } from 'file:///Users/vanceandersen/Desktop/Projects/HaloGuessr/node_modules/consola/dist/index.mjs';
 import { ErrorParser } from 'file:///Users/vanceandersen/Desktop/Projects/HaloGuessr/node_modules/youch-core/build/index.js';
 import { Youch } from 'file:///Users/vanceandersen/Desktop/Projects/HaloGuessr/node_modules/youch/build/index.js';
@@ -646,6 +647,8 @@ const _inlineRuntimeConfig = {
     }
   },
   "public": {},
+  "upstashRedisUrl": "https://sharing-seasnail-25599.upstash.io",
+  "upstashRedisToken": "AWP_AAIjcDE4NDhjMTVmZmZlY2E0YTJlOWQyZjk0YWYzODdmZjg4N3AxMA",
   "blobReadWriteToken": "vercel_blob_rw_T5oHbcANklyYgf4b_Y9o4LCOmqdTajpgvlV98SiCpwFzll9"
 };
 const envOptions = {
@@ -1432,17 +1435,20 @@ const errorDev = /*#__PURE__*/Object.freeze({
   template: template$1
 });
 
-const dataPath$1 = path.join(process.cwd(), "data/screenshots.json");
 const guess_post = defineEventHandler(async (event) => {
   try {
+    const config = useRuntimeConfig();
+    const redis = new Redis({
+      url: config.upstashRedisUrl,
+      token: config.upstashRedisToken
+    });
     const body = await readBody(event);
     const { id, guess } = body;
-    const data = await fs.readFile(dataPath$1, "utf8");
-    const screenshots = JSON.parse(data);
-    const screenshot = screenshots.find((s) => s.id === id);
-    if (!screenshot) {
+    const screenshotStr = await redis.get(`screenshot:${id}`);
+    if (!screenshotStr) {
       return { error: "Screenshot not found" };
     }
+    const screenshot = JSON.parse(screenshotStr);
     const distance = Math.sqrt(
       Math.pow(guess.x - screenshot.location.x, 2) + Math.pow(guess.y - screenshot.location.y, 2)
     );
@@ -1464,22 +1470,27 @@ const guess_post$1 = /*#__PURE__*/Object.freeze({
   default: guess_post
 });
 
-const dataPath = path.join(process.cwd(), "data/screenshots.json");
 const random_get = defineEventHandler(async () => {
   try {
-    const data = await fs.readFile(dataPath, "utf8");
-    const screenshots = JSON.parse(data);
-    if (screenshots.length === 0) {
+    const config = useRuntimeConfig();
+    const redis = new Redis({
+      url: config.upstashRedisUrl,
+      token: config.upstashRedisToken
+    });
+    const keys = await redis.keys("screenshot:*");
+    if (keys.length === 0) {
       return { error: "No screenshots available" };
     }
-    const randomIndex = Math.floor(Math.random() * screenshots.length);
-    const screenshot = screenshots[randomIndex];
+    const randomKey = keys[Math.floor(Math.random() * keys.length)];
+    const screenshotStr = await redis.get(randomKey);
+    if (!screenshotStr) {
+      return { error: "Screenshot not found" };
+    }
+    const screenshot = JSON.parse(screenshotStr);
     return {
       id: screenshot.id,
       screenshotPath: screenshot.screenshotPath,
-      // Vercel Blob URL
       mapPath: screenshot.mapPath,
-      // Vercel Blob URL
       mapName: screenshot.mapName
     };
   } catch (error) {
@@ -1495,6 +1506,11 @@ const random_get$1 = /*#__PURE__*/Object.freeze({
 
 const upload_post = defineEventHandler(async (event) => {
   try {
+    const config = useRuntimeConfig();
+    const redis = new Redis({
+      url: config.upstashRedisUrl,
+      token: config.upstashRedisToken
+    });
     const formData = await readMultipartFormData(event);
     if (!formData) {
       return { error: "No form data" };
@@ -1516,10 +1532,12 @@ const upload_post = defineEventHandler(async (event) => {
     }
     const id = nanoid();
     const screenshotBlob = await put(`screenshots/${id}_${screenshotFile.filename}`, screenshotFile.data, {
-      access: "public"
+      access: "public",
+      token: config.blobReadWriteToken
     });
     const mapBlob = await put(`maps/${id}_${mapFile.filename}`, mapFile.data, {
-      access: "public"
+      access: "public",
+      token: config.blobReadWriteToken
     });
     const metadata = {
       id,
@@ -1528,12 +1546,8 @@ const upload_post = defineEventHandler(async (event) => {
       mapName,
       location: { x: parseFloat(x), y: parseFloat(y) }
     };
-    return {
-      success: true,
-      id,
-      metadata,
-      warning: "Metadata not saved. Manually add the following to data/screenshots.json and redeploy:\n" + JSON.stringify(metadata, null, 2)
-    };
+    await redis.set(`screenshot:${id}`, JSON.stringify(metadata));
+    return { success: true, id };
   } catch (error) {
     console.error(error);
     return { error: "Failed to upload" };
