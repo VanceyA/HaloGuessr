@@ -1,11 +1,6 @@
 import { defineEventHandler, readMultipartFormData } from 'h3'
-import fs from 'fs/promises'
-import path from 'path'
+import { put } from '@vercel/blob'
 import { nanoid } from 'nanoid'
-
-const screenshotsDir = path.join(process.cwd(), 'public/screenshots')
-const mapsDir = path.join(process.cwd(), 'public/maps')
-const dataPath = path.join(process.cwd(), 'server/data/screenshots.json')
 
 export default defineEventHandler(async (event) => {
   try {
@@ -29,25 +24,26 @@ export default defineEventHandler(async (event) => {
       return { error: 'Missing required fields' }
     }
     const id = nanoid()
-    const screenshotExt = path.extname(screenshotFile.filename || '')
-    const mapExt = path.extname(mapFile.filename || '')
-    const screenshotName = `${id}_screenshot${screenshotExt}`
-    const mapNameFile = `${id}_map${mapExt}`
-    const screenshotPath = path.join(screenshotsDir, screenshotName)
-    const mapPath = path.join(mapsDir, mapNameFile)
-    await fs.writeFile(screenshotPath, screenshotFile.data)
-    await fs.writeFile(mapPath, mapFile.data)
-    const data = await fs.readFile(dataPath, 'utf8')
-    const screenshots = JSON.parse(data)
-    screenshots.push({
-      id,
-      screenshotPath: `/screenshots/${screenshotName}`,
-      mapPath: `/maps/${mapNameFile}`,
-      mapName,
-      location: { x: parseFloat(x), y: parseFloat(y) } // Store as percentages
+    const screenshotBlob = await put(`screenshots/${id}_${screenshotFile.filename}`, screenshotFile.data, {
+      access: 'public'
     })
-    await fs.writeFile(dataPath, JSON.stringify(screenshots, null, 2))
-    return { success: true, id }
+    const mapBlob = await put(`maps/${id}_${mapFile.filename}`, mapFile.data, {
+      access: 'public'
+    })
+    const metadata = {
+      id,
+      screenshotPath: screenshotBlob.url,
+      mapPath: mapBlob.url,
+      mapName,
+      location: { x: parseFloat(x), y: parseFloat(y) }
+    }
+    // Note: Cannot write to screenshots.json at runtime on Vercel
+    return {
+      success: true,
+      id,
+      metadata,
+      warning: 'Metadata not saved. Manually add the following to data/screenshots.json and redeploy:\n' + JSON.stringify(metadata, null, 2)
+    }
   } catch (error) {
     console.error(error)
     return { error: 'Failed to upload' }

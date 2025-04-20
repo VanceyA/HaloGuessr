@@ -34,7 +34,7 @@ import MapCanvas from '~/components/MapCanvas.vue'
 const screenshotFile = ref(null)
 const mapFile = ref(null)
 const mapName = ref('')
-const coordinates = ref(null) // { x: percentage, y: percentage }
+const coordinates = ref(null)
 const uploadStatus = ref('')
 
 const mapPreview = computed(() => {
@@ -53,7 +53,7 @@ const onMapChange = (event) => {
 }
 
 const setCoordinates = (coords) => {
-  coordinates.value = coords // { x: percentage, y: percentage }
+  coordinates.value = coords
 }
 
 const upload = async () => {

@@ -2,7 +2,7 @@ import { defineEventHandler } from 'h3'
 import fs from 'fs/promises'
 import path from 'path'
 
-const dataPath = path.join(process.cwd(), 'server/data/screenshots.json')
+const dataPath = path.join(process.cwd(), 'data/screenshots.json')
 
 export default defineEventHandler(async () => {
   try {
@@ -15,8 +15,8 @@ export default defineEventHandler(async () => {
     const screenshot = screenshots[randomIndex]
     return {
       id: screenshot.id,
-      screenshotPath: screenshot.screenshotPath,
-      mapPath: screenshot.mapPath,
+      screenshotPath: screenshot.screenshotPath, // Vercel Blob URL
+      mapPath: screenshot.mapPath, // Vercel Blob URL
       mapName: screenshot.mapName
     }
   } catch (error) {
