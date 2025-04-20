@@ -4,6 +4,7 @@ import { Redis } from '@upstash/redis'
 export default defineEventHandler(async () => {
   try {
     const config = useRuntimeConfig()
+    console.log('Upstash Redis URL:', config.upstashRedisUrl)
     const redis = new Redis({
       url: config.upstashRedisUrl,
       token: config.upstashRedisToken
