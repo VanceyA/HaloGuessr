@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
     const config = useRuntimeConfig()
     const redis = new Redis({
       url: config.upstashRedisUrl,
-      token: config.upstashRedisToken,
+      token: config.upstashRedisToken
     })
     const body = await readBody(event)
     const { id, guess } = body
