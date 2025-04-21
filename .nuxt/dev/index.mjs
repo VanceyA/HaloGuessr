@@ -1444,11 +1444,10 @@ const guess_post = defineEventHandler(async (event) => {
     });
     const body = await readBody(event);
     const { id, guess } = body;
-    const screenshotStr = await redis.get(`screenshot:${id}`);
-    if (!screenshotStr) {
+    const screenshot = await redis.get(`screenshot:${id}`);
+    if (!screenshot) {
       return { error: "Screenshot not found" };
     }
-    const screenshot = JSON.parse(screenshotStr);
     const distance = Math.sqrt(
       Math.pow(guess.x - screenshot.location.x, 2) + Math.pow(guess.y - screenshot.location.y, 2)
     );
@@ -1473,6 +1472,8 @@ const guess_post$1 = /*#__PURE__*/Object.freeze({
 const random_get = defineEventHandler(async () => {
   try {
     const config = useRuntimeConfig();
+    console.log("url", config.upstashRedisUrl);
+    console.log("token", config.upstashRedisToken);
     const redis = new Redis({
       url: config.upstashRedisUrl,
       token: config.upstashRedisToken
@@ -1482,11 +1483,10 @@ const random_get = defineEventHandler(async () => {
       return { error: "No screenshots available" };
     }
     const randomKey = keys[Math.floor(Math.random() * keys.length)];
-    const screenshotStr = await redis.get(randomKey);
-    if (!screenshotStr) {
+    const screenshot = await redis.get(randomKey);
+    if (!screenshot) {
       return { error: "Screenshot not found" };
     }
-    const screenshot = JSON.parse(screenshotStr);
     return {
       id: screenshot.id,
       screenshotPath: screenshot.screenshotPath,

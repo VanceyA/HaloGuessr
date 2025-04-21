@@ -4,7 +4,6 @@ import { Redis } from '@upstash/redis'
 export default defineEventHandler(async () => {
   try {
     const config = useRuntimeConfig()
-    console.log('Upstash Redis URL:', config.upstashRedisUrl)
     const redis = new Redis({
       url: config.upstashRedisUrl,
       token: config.upstashRedisToken
@@ -14,11 +13,15 @@ export default defineEventHandler(async () => {
       return { error: 'No screenshots available' }
     }
     const randomKey = keys[Math.floor(Math.random() * keys.length)]
-    const screenshotStr = await redis.get(randomKey) as string
-    if (!screenshotStr) {
+    const screenshot = await redis.get(randomKey) as {
+      id: string
+      screenshotPath: string
+      mapPath: string
+      mapName: string
+    }
+    if (!screenshot) {
       return { error: 'Screenshot not found' }
     }
-    const screenshot = JSON.parse(screenshotStr as string)
     return {
       id: screenshot.id,
       screenshotPath: screenshot.screenshotPath,

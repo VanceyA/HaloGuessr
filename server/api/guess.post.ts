@@ -10,11 +10,19 @@ export default defineEventHandler(async (event) => {
     })
     const body = await readBody(event)
     const { id, guess } = body
-    const screenshotStr = await redis.get(`screenshot:${id}`)
-    if (!screenshotStr) {
+    const screenshot = await redis.get(`screenshot:${id}`) as {
+      id: string
+      screenshotPath: string
+      mapPath: string
+      mapName: string
+      location: {
+        x: number
+        y: number
+      }
+    }
+    if (!screenshot) {
       return { error: 'Screenshot not found' }
     }
-    const screenshot = JSON.parse(screenshotStr as string)
     const distance = Math.sqrt(
       Math.pow(guess.x - screenshot.location.x, 2) +
       Math.pow(guess.y - screenshot.location.y, 2)
