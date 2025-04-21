@@ -7,8 +7,8 @@ export default defineNuxtConfig({
     preset: 'vercel'
   },
   runtimeConfig: {
-    upstashRedisUrl: process.env.UPSTASH_REDIS_REST_URL,
-    upstashRedisToken: process.env.UPSTASH_REDIS_REST_TOKEN,
+    upstashRedisUrl: process.env.KV_RESR_API_URL,
+    upstashRedisToken: process.env.KV_RESR_API_TOKEN,
     blobReadWriteToken: process.env.BLOB_READ_WRITE_TOKEN
   }
 })
