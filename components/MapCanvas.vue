@@ -1,34 +1,85 @@
 <template>
-  <div class="relative">
-    <img :src="mapPath" alt="Halo Map" ref="mapImage" class="w-full h-auto rounded" @click="handleClick" />
+  <div class="relative w-full h-full">
+    <img 
+      :src="mapPath" 
+      alt="Halo Map" 
+      ref="mapImage" 
+      class="w-full h-auto object-contain" 
+      @click="handleClick"
+      :class="{'cursor-not-allowed': disabled && !guess, 'cursor-default': disabled && guess}"
+    />
+    
+    <!-- Guess Marker -->
     <div
       v-if="guess"
-      class="absolute w-4 h-4 rounded-full"
-      :class="isUpload ? 'bg-blue-500' : 'bg-red-500'"
+      class="absolute guess-marker"
       :style="guessStyle"
-    ></div>
+      :data-x="guess.x"
+      :data-y="guess.y"
+    >
+      <div class="w-5 h-5 rounded-full flex items-center justify-center">
+        <div class="w-full h-full animate-ping absolute rounded-full opacity-70" 
+             :class="isUpload ? 'bg-blue-400' : 'bg-red-500'"></div>
+        <div class="w-full h-full rounded-full" 
+             :class="isUpload ? 'bg-blue-400' : 'bg-red-500'"></div>
+        <div class="absolute -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-white rounded-full"></div>
+      </div>
+    </div>
+    
+    <!-- Correct Location Marker -->
     <div
       v-if="correctLocation && !isUpload"
-      class="absolute w-4 h-4 bg-green-500 rounded-full"
+      class="absolute w-5 h-5 rounded-full z-10"
       :style="correctLocationStyle"
+    >
+      <div class="w-full h-full flex items-center justify-center">
+        <div class="w-full h-full animate-ping absolute rounded-full opacity-70 bg-halo-green"></div>
+        <div class="w-full h-full rounded-full bg-halo-green"></div>
+        <div class="absolute -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-white rounded-full"></div>
+      </div>
+    </div>
+    
+    <!-- Distance Line -->
+    <div
+      v-if="guess && correctLocation && !isUpload"
+      class="absolute pointer-events-none"
+      :style="lineStyle"
     ></div>
+    
+    <!-- Distance Label -->
+    <div
+      v-if="guess && correctLocation && !isUpload"
+      class="absolute pointer-events-none text-xs bg-black/80 text-white px-1.5 py-0.5 rounded transform -translate-x-1/2 -translate-y-1/2"
+      :style="distanceLabelStyle"
+    >
+      {{ calculateDistance().toFixed(0) }}%
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   mapPath: String,
-  correctLocation: Object, // { x: percentage, y: percentage }
-  isUpload: { type: Boolean, default: false }
+  correctLocation: Object,
+  isUpload: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false }
 })
+
 const emit = defineEmits(['guess'])
 const mapImage = ref(null)
+const guess = ref(null)
 
-const guess = ref(null) // { x: percentage, y: percentage }
+// Reset the guess when mapPath changes
+watch(() => props.mapPath, () => {
+  guess.value = null
+}, { immediate: true })
 
 const handleClick = (event) => {
+  // Don't allow clicks if disabled
+  if (props.disabled) return
+  
   const rect = mapImage.value.getBoundingClientRect()
   const x = (event.clientX - rect.left) / rect.width * 100 // Convert to percentage
   const y = (event.clientY - rect.top) / rect.height * 100
@@ -59,4 +110,55 @@ const correctLocationStyle = computed(() => {
     transform: 'translate(-50%, -50%)'
   }
 })
+
+const lineStyle = computed(() => {
+  if (!guess.value || !props.correctLocation || !mapImage.value) return {}
+  
+  const rect = mapImage.value.getBoundingClientRect();
+  const x1 = (guess.value.x / 100) * rect.width;
+  const y1 = (guess.value.y / 100) * rect.height;
+  const x2 = (props.correctLocation.x / 100) * rect.width;
+  const y2 = (props.correctLocation.y / 100) * rect.height;
+  
+  const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+  const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+  
+  return {
+    left: `${x1}px`,
+    top: `${y1}px`,
+    width: `${length}px`,
+    height: '2px',
+    background: 'linear-gradient(to right, rgba(220, 38, 38, 0.8), rgba(123, 244, 66, 0.8))',
+    transform: `rotate(${angle}deg)`,
+    transformOrigin: '0 0'
+  }
+})
+
+const distanceLabelStyle = computed(() => {
+  if (!guess.value || !props.correctLocation || !mapImage.value) return {}
+  
+  const rect = mapImage.value.getBoundingClientRect();
+  const x1 = (guess.value.x / 100) * rect.width;
+  const y1 = (guess.value.y / 100) * rect.height;
+  const x2 = (props.correctLocation.x / 100) * rect.width;
+  const y2 = (props.correctLocation.y / 100) * rect.height;
+  
+  // Position label at the middle of the distance line
+  const midX = (x1 + x2) / 2;
+  const midY = (y1 + y2) / 2;
+  
+  return {
+    left: `${midX}px`,
+    top: `${midY}px`
+  }
+})
+
+const calculateDistance = () => {
+  if (!guess.value || !props.correctLocation) return 0
+  
+  return Math.sqrt(
+    Math.pow(guess.value.x - props.correctLocation.x, 2) +
+    Math.pow(guess.value.y - props.correctLocation.y, 2)
+  )
+}
 </script>

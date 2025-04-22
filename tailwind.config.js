@@ -8,9 +8,13 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'halo-green': '#1a3c34', // UNSC green
-        'halo-purple': '#4b0082' // Covenant purple
-      }
+        'halo-green': '#7bf442',
+        'halo-blue': '#1c3b57',
+        'halo-dark': '#0a1929',
+        'halo-gray': '#263238',
+        'halo-accent': '#52b2bf',
+        'unsc': '#415a77'
+      },
     }
   },
   plugins: []

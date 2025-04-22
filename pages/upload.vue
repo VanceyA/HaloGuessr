@@ -1,31 +1,137 @@
 <template>
-  <div class="min-h-screen bg-gray-100 flex flex-col items-center p-4">
-    <h1 class="text-4xl font-bold text-halo-green mb-4">Upload Halo Screenshot</h1>
-    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl space-y-4">
-      <div>
-        <label class="block text-lg font-medium mb-1">Screenshot Image</label>
-        <input type="file" @change="onScreenshotChange" accept="image/*" class="border p-2 w-full rounded" />
+  <div class="min-h-screen bg-gradient-to-b from-halo-dark to-black text-gray-200 flex flex-col p-4 md:p-8">
+    <!-- Modern Header with Consistent Logo -->
+    <header class="mb-6 md:mb-8">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+        <!-- Logo Section -->
+        <div class="flex items-center space-x-2">
+          <div class="flex items-center">
+            <!-- Halo-inspired shield icon -->
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="mr-3">
+              <path d="M24 6L8 12V24C8 32.8 14.4 41.2 24 44C33.6 41.2 40 32.8 40 24V12L24 6Z" fill="url(#paint0_linear)" />
+              <defs>
+                <linearGradient id="paint0_linear" x1="24" y1="6" x2="24" y2="44" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#7bf442" />
+                  <stop offset="1" stop-color="#52b2bf" />
+                </linearGradient>
+              </defs>
+            </svg>
+            
+            <div>
+              <h1 class="text-3xl font-light tracking-wider">
+                <span class="font-bold text-white">HALO</span>
+                <span class="text-blue-400 opacity-90">GUESSR</span>
+              </h1>
+              <div class="h-0.5 w-full bg-gradient-to-r from-halo-green to-blue-400 rounded"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-3 md:mt-0">
+          <span class="text-sm text-gray-400 bg-halo-gray/50 py-1.5 px-4 rounded-full uppercase tracking-wider">
+            Upload New Locations
+          </span>
+        </div>
       </div>
-      <div>
-        <label class="block text-lg font-medium mb-1">Map Image</label>
-        <input type="file" @change="onMapChange" accept="image/*" class="border p-2 w-full rounded" />
+    </header>
+
+    <div class="w-full max-w-3xl mx-auto bg-halo-gray/30 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden">
+      <div class="p-6 md:p-8">
+        <!-- File Upload Section -->
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+          <div>
+            <label class="block text-blue-300 mb-2 font-medium">Screenshot Image</label>
+            <div class="border border-dashed border-blue-400/50 rounded-lg p-4 bg-halo-dark/50 hover:bg-halo-blue/10 transition-colors cursor-pointer">
+              <input 
+                type="file" 
+                @change="onScreenshotChange" 
+                accept="image/*" 
+                class="hidden" 
+                id="screenshot-upload"
+              />
+              <label for="screenshot-upload" class="flex flex-col items-center cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400/70 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span class="text-sm text-gray-400">
+                  {{ screenshotFile ? screenshotFile.name : 'Click to select a screenshot' }}
+                </span>
+              </label>
+            </div>
+          </div>
+          
+          <div>
+            <label class="block text-blue-300 mb-2 font-medium">Map Image</label>
+            <div class="border border-dashed border-blue-400/50 rounded-lg p-4 bg-halo-dark/50 hover:bg-halo-blue/10 transition-colors cursor-pointer">
+              <input 
+                type="file" 
+                @change="onMapChange" 
+                accept="image/*" 
+                class="hidden" 
+                id="map-upload"
+              />
+              <label for="map-upload" class="flex flex-col items-center cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400/70 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4" />
+                </svg>
+                <span class="text-sm text-gray-400">
+                  {{ mapFile ? mapFile.name : 'Click to select a map' }}
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Map Name Input -->
+        <div class="mb-6">
+          <label class="block text-blue-300 mb-2 font-medium">Map Name</label>
+          <input 
+            v-model="mapName" 
+            type="text" 
+            placeholder="e.g., Blood Gulch" 
+            class="w-full px-4 py-3 bg-halo-dark/70 border border-blue-400/50 focus:border-halo-green rounded-lg outline-none focus:ring-1 focus:ring-halo-green text-white"
+          />
+        </div>
+        
+        <!-- Map Selection (if map is uploaded) -->
+        <div v-if="mapPreview" class="mb-6">
+          <label class="block text-blue-300 mb-2 font-medium">Mark the exact location on the map:</label>
+          <div class="rounded-lg overflow-hidden border border-blue-400/50">
+            <MapCanvas :map-path="mapPreview" :is-upload="true" @guess="setCoordinates" />
+          </div>
+          <p v-if="coordinates" class="mt-2 text-blue-300">
+            Selected: X: <span class="text-halo-green">{{ coordinates.x.toFixed(0) }}%</span>, 
+            Y: <span class="text-halo-green">{{ coordinates.y.toFixed(0) }}%</span>
+          </p>
+        </div>
+        
+        <!-- Upload Button & Status -->
+        <div>
+          <button 
+            @click="upload" 
+            class="w-full bg-halo-blue hover:bg-blue-700 text-halo-green font-bold py-3 px-6 rounded-md
+                  transition-all duration-200 transform hover:scale-105 flex items-center justify-center
+                  disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-halo-blue"
+            :disabled="!screenshotFile || !mapFile || !mapName || !coordinates"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span>UPLOAD LOCATION</span>
+          </button>
+          
+          <div v-if="uploadStatus" 
+               class="mt-4 p-3 rounded-lg text-center"
+               :class="uploadStatus.includes('successful') ? 'bg-green-800/30 text-green-300' : 'bg-red-800/30 text-red-300'"
+          >
+            {{ uploadStatus }}
+          </div>
+        </div>
       </div>
-      <div>
-        <label class="block text-lg font-medium mb-1">Map Name</label>
-        <input v-model="mapName" type="text" placeholder="e.g., Blood Gulch" class="border p-2 w-full rounded" />
-      </div>
-      <div v-if="mapPreview">
-        <label class="block text-lg font-medium mb-1">Click on the map to set the screenshot location</label>
-        <MapCanvas :map-path="mapPreview" :is-upload="true" @guess="setCoordinates" />
-        <p v-if="coordinates" class="mt-2">Selected: X: {{ coordinates.x.toFixed(2) }}%, Y: {{ coordinates.y.toFixed(2) }}%</p>
-      </div>
-      <button @click="upload" class="bg-halo-green text-white px-4 py-2 rounded hover:bg-green-700" :disabled="!screenshotFile || !mapFile || !mapName || !coordinates">
-        Upload
-      </button>
-      <p v-if="uploadStatus" class="mt-4 text-lg">{{ uploadStatus }}</p>
     </div>
   </div>
 </template>
+
 
 <script setup>
 import { ref, computed } from 'vue'
