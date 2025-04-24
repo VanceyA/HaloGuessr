@@ -43,7 +43,7 @@
     </header>
 
     <!-- Main Content -->
-    <div v-if="screenshot" class="w-full max-w-7xl mx-auto flex-grow">
+    <div v-if="screenshot" class="w-full max-w-7xl mx-auto flex-grow" :class="{'opacity-0': !imagesLoaded}">
       <!-- Game Area - Grid layout for desktop -->
       <div class="grid md:grid-cols-5 gap-6 h-full">
         <!-- Screenshot Container (3/5 width on desktop) -->
@@ -53,6 +53,7 @@
               :src="screenshot.screenshotPath" 
               alt="Halo Screenshot" 
               class="w-full h-full object-cover"
+              @load="handleScreenshotLoaded"
             />
             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
               <p class="text-white font-medium">
@@ -105,10 +106,12 @@
               </div>
               
               <MapCanvas 
+                v-if="screenshot"
                 :map-path="screenshot.mapPath" 
                 :correct-location="result?.correctLocation" 
                 @guess="submitGuess"
                 :disabled="hasGuessed"
+                @map-loaded="handleMapLoaded"
               />
             </div>
             
@@ -130,19 +133,30 @@
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-else class="flex-grow flex items-center justify-center">
+    <!-- Initial Loading State (when there's no screenshot) -->
+    <div v-if="!screenshot && !isLoadingNextLevel" class="flex-grow flex items-center justify-center">
       <div class="text-center">
         <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-halo-green mb-4"></div>
         <p class="text-lg text-blue-300">Loading Halo location data...</p>
         <p class="text-sm text-gray-400 mt-2">Please upload locations if none are available.</p>
       </div>
     </div>
+    
+    <!-- Level Transition or Images Loading Overlay -->
+    <div v-if="isLoadingNextLevel || (screenshot && !imagesLoaded)" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+      <div class="text-center">
+        <div class="inline-block animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-halo-green mb-4"></div>
+        <p class="text-xl text-halo-green font-bold">Loading Next Location</p>
+        <div class="mt-3 w-40 h-1 bg-gray-800 rounded-full mx-auto overflow-hidden">
+          <div class="h-full bg-halo-green animate-pulse"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import MapCanvas from '~/components/MapCanvas.vue'
 
 const screenshot = ref(null)
@@ -150,6 +164,20 @@ const result = ref(null)
 const score = ref(0)
 const hasGuessed = ref(false)
 const currentId = ref(null)
+const isLoadingNextLevel = ref(false)
+const screenshotLoaded = ref(false)
+const mapLoaded = ref(false)
+
+// Computed property to determine if all images are loaded
+const imagesLoaded = computed(() => {
+  return screenshotLoaded.value && mapLoaded.value
+})
+
+// Reset loading states when screenshot changes
+watch(screenshot, () => {
+  screenshotLoaded.value = false
+  mapLoaded.value = false
+})
 
 const fetchScreenshot = async () => {
   try {
@@ -170,6 +198,29 @@ const fetchScreenshot = async () => {
     }
   } catch (error) {
     console.error(error)
+  } finally {
+    // We don't turn off loading state here
+    // It will be turned off once images are loaded
+    if (!screenshot.value) {
+      isLoadingNextLevel.value = false
+    }
+  }
+}
+
+const handleScreenshotLoaded = () => {
+  screenshotLoaded.value = true
+  checkAllImagesLoaded()
+}
+
+const handleMapLoaded = () => {
+  mapLoaded.value = true
+  checkAllImagesLoaded()
+}
+
+const checkAllImagesLoaded = () => {
+  if (imagesLoaded.value) {
+    // Only turn off loading when both images are ready
+    isLoadingNextLevel.value = false
   }
 }
 
@@ -196,7 +247,17 @@ const submitGuess = async (guess) => {
 }
 
 const nextScreenshot = () => {
-  fetchScreenshot()
+  // Show loading state
+  isLoadingNextLevel.value = true
+  
+  // Reset image loading states
+  screenshotLoaded.value = false
+  mapLoaded.value = false
+  
+  // Add a slight delay to allow the loading UI to render
+  setTimeout(() => {
+    fetchScreenshot()
+  }, 100)
 }
 
 const calculateDistance = (correctLocation) => {

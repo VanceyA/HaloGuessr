@@ -7,6 +7,7 @@
       class="w-full h-auto object-contain" 
       @click="handleClick"
       :class="{'cursor-not-allowed': disabled && !guess, 'cursor-default': disabled && guess}"
+      @load="handleMapLoaded"
     />
     
     <!-- Guess Marker -->
@@ -68,7 +69,8 @@ const props = defineProps({
   initialMarker: { type: Object, default: null }
 })
 
-const emit = defineEmits(['guess'])
+// Fix: Add map-loaded to the emit declarations
+const emit = defineEmits(['guess', 'map-loaded'])
 const mapImage = ref(null)
 const guess = ref(null)
 
@@ -89,6 +91,11 @@ const handleClick = (event) => {
   const y = (event.clientY - rect.top) / rect.height * 100
   guess.value = { x, y }
   emit('guess', guess.value)
+}
+
+// Add dedicated function to handle map load event
+const handleMapLoaded = () => {
+  emit('map-loaded')
 }
 
 // Set the initial marker position
