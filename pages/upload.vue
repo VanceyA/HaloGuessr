@@ -27,9 +27,15 @@
           </div>
         </div>
         
-        <div class="mt-3 md:mt-0">
+        <div class="mt-3 md:mt-0 flex space-x-3">
+          <NuxtLink 
+            to="/admin/levels" 
+            class="text-sm text-gray-400 bg-halo-gray/50 py-1.5 px-4 rounded-full uppercase tracking-wider hover:bg-halo-gray/70 transition-colors"
+          >
+            Back to Levels
+          </NuxtLink>
           <span class="text-sm text-gray-400 bg-halo-gray/50 py-1.5 px-4 rounded-full uppercase tracking-wider">
-            Upload New Locations
+            Upload New Levels
           </span>
         </div>
       </div>
@@ -50,9 +56,15 @@
                 id="screenshot-upload"
               />
               <label for="screenshot-upload" class="flex flex-col items-center cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400/70 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+                <div v-if="screenshotPreview" class="w-full mb-2">
+                  <div class="text-xs text-blue-300 mb-1">Preview:</div>
+                  <img :src="screenshotPreview" alt="Screenshot preview" class="w-full h-auto rounded max-h-40 object-contain" />
+                </div>
+                <template v-else>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400/70 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </template>
                 <span class="text-sm text-gray-400">
                   {{ screenshotFile ? screenshotFile.name : 'Click to select a screenshot' }}
                 </span>
@@ -71,9 +83,15 @@
                 id="map-upload"
               />
               <label for="map-upload" class="flex flex-col items-center cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400/70 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4" />
-                </svg>
+                <div v-if="mapPreview" class="w-full mb-2">
+                  <div class="text-xs text-blue-300 mb-1">Preview:</div>
+                  <img :src="mapPreview" alt="Map preview" class="w-full h-auto rounded max-h-40 object-contain" />
+                </div>
+                <template v-else>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-400/70 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4" />
+                  </svg>
+                </template>
                 <span class="text-sm text-gray-400">
                   {{ mapFile ? mapFile.name : 'Click to select a map' }}
                 </span>
@@ -82,6 +100,45 @@
           </div>
         </div>
         
+        <!-- Game Mode Selector -->
+        <div class="mb-6">
+          <label class="block text-blue-300 mb-2 font-medium">Game Mode</label>
+          <div class="flex bg-halo-dark/70 rounded-lg p-1 border border-blue-400/50">
+            <button 
+              v-for="mode in ['Multiplayer', 'Campaign', 'Firefight']" 
+              :key="mode"
+              @click="gameMode = mode"
+              class="flex-1 py-2 text-center rounded-md transition-all duration-200"
+              :class="gameMode === mode ? 'bg-halo-blue text-halo-green font-medium' : 'text-gray-400 hover:bg-halo-blue/20'"
+            >
+              {{ mode }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Halo Game Selector -->
+        <div class="mb-6">
+          <label class="block text-blue-300 mb-2 font-medium">Halo Game</label>
+          <select 
+            v-model="haloGame" 
+            class="w-full px-4 py-3 bg-halo-dark/70 border border-blue-400/50 focus:border-halo-green rounded-lg outline-none focus:ring-1 focus:ring-halo-green text-white appearance-none"
+          >
+            <option value="" disabled>Select Halo Game</option>
+            <option v-for="game in haloGames" :key="game" :value="game">{{ game }}</option>
+          </select>
+        </div>
+        
+        <!-- Level Name Input -->
+        <div class="mb-6">
+          <label class="block text-blue-300 mb-2 font-medium">Level Name</label>
+          <input 
+            v-model="levelName" 
+            type="text" 
+            placeholder="e.g., Blue Grenades" 
+            class="w-full px-4 py-3 bg-halo-dark/70 border border-blue-400/50 focus:border-halo-green rounded-lg outline-none focus:ring-1 focus:ring-halo-green text-white"
+          />
+        </div>
+
         <!-- Map Name Input -->
         <div class="mb-6">
           <label class="block text-blue-300 mb-2 font-medium">Map Name</label>
@@ -112,7 +169,7 @@
             class="w-full bg-halo-blue hover:bg-blue-700 text-halo-green font-bold py-3 px-6 rounded-md
                   transition-all duration-200 transform hover:scale-105 flex items-center justify-center
                   disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-halo-blue"
-            :disabled="!screenshotFile || !mapFile || !mapName || !coordinates"
+            :disabled="!screenshotFile || !mapFile || !levelName || !coordinates || !haloGame"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
@@ -132,16 +189,36 @@
   </div>
 </template>
 
-
 <script setup>
 import { ref, computed } from 'vue'
 import MapCanvas from '~/components/MapCanvas.vue'
 
 const screenshotFile = ref(null)
 const mapFile = ref(null)
+const levelName = ref('')
 const mapName = ref('')
 const coordinates = ref(null)
 const uploadStatus = ref('')
+const gameMode = ref('Multiplayer')
+const haloGame = ref('')
+
+const haloGames = [
+  'Halo: Combat Evolved',
+  'Halo 2',
+  'Halo 3',
+  'Halo 3: ODST',
+  'Halo: Reach',
+  'Halo 4',
+  'Halo 5: Guardians',
+  'Halo Infinite'
+]
+
+const screenshotPreview = computed(() => {
+  if (screenshotFile.value) {
+    return URL.createObjectURL(screenshotFile.value)
+  }
+  return null
+})
 
 const mapPreview = computed(() => {
   if (mapFile.value) {
@@ -163,7 +240,7 @@ const setCoordinates = (coords) => {
 }
 
 const upload = async () => {
-  if (!screenshotFile.value || !mapFile.value || !mapName.value || !coordinates.value) {
+  if (!screenshotFile.value || !mapFile.value || !levelName.value || !coordinates.value || !haloGame.value) {
     uploadStatus.value = 'Please fill all fields and select a location'
     return
   }
@@ -171,6 +248,9 @@ const upload = async () => {
   formData.append('screenshot', screenshotFile.value)
   formData.append('mapImage', mapFile.value)
   formData.append('mapName', mapName.value)
+  formData.append('levelName', levelName.value)
+  formData.append('gameMode', gameMode.value)
+  formData.append('haloGame', haloGame.value)
   formData.append('x', coordinates.value.x)
   formData.append('y', coordinates.value.y)
   try {
@@ -183,7 +263,9 @@ const upload = async () => {
       screenshotFile.value = null
       mapFile.value = null
       mapName.value = ''
+      levelName.value = ''
       coordinates.value = null
+      // Keep the game mode and halo game selections for convenience
     } else {
       uploadStatus.value = response.error || 'Upload failed'
     }

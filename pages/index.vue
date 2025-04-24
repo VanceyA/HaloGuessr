@@ -75,8 +75,8 @@
               <!-- Integrated Result Info (appears in map header) -->
               <div v-if="result" class="flex items-center space-x-3">
                 <div class="text-xs text-white">
-                  <span class="text-gray-400">Distance:</span> 
-                  <span class="text-halo-green">{{ calculateDistance(result.correctLocation) }}%</span>
+                  <span class="text-gray-400">Accuracy: </span> 
+                  <span class="text-halo-green">{{ 100 - calculateDistance(result.correctLocation) }}%</span>
                 </div>
                 <button 
                   @click="nextScreenshot" 

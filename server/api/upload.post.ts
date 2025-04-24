@@ -14,19 +14,25 @@ export default defineEventHandler(async (event) => {
     if (!formData) {
       return { error: 'No form data' }
     }
+    let levelName = ''
+    let gameMode = ''
+    let haloGame = ''
     let mapName = ''
     let x = ''
     let y = ''
     let screenshotFile = null
     let mapFile = null
     for (const field of formData) {
+      if (field.name === 'levelName') levelName = field.data.toString()
+      if (field.name === 'gameMode') gameMode = field.data.toString()
+      if (field.name === 'haloGame') haloGame = field.data.toString()
       if (field.name === 'mapName') mapName = field.data.toString()
       if (field.name === 'x') x = field.data.toString()
       if (field.name === 'y') y = field.data.toString()
       if (field.name === 'screenshot') screenshotFile = field
       if (field.name === 'mapImage') mapFile = field
     }
-    if (!mapName || !x || !y || !screenshotFile || !mapFile) {
+    if (!levelName || !x || !y || !screenshotFile || !mapFile || !gameMode || !haloGame || !mapName) {
       return { error: 'Missing required fields' }
     }
     const id = nanoid()
@@ -43,6 +49,9 @@ export default defineEventHandler(async (event) => {
       screenshotPath: screenshotBlob.url,
       mapPath: mapBlob.url,
       mapName,
+      levelName,
+      gameMode,
+      haloGame,
       location: { x: parseFloat(x), y: parseFloat(y) }
     }
     await redis.set(`screenshot:${id}`, JSON.stringify(metadata))

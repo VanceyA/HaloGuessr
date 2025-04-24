@@ -27,8 +27,24 @@ export default defineEventHandler(async (event) => {
       Math.pow(guess.x - screenshot.location.x, 2) +
       Math.pow(guess.y - screenshot.location.y, 2)
     )
+    
+    // Perfect score radius (units within which score is 1000)
+    const perfectRadius = 3
+    
+    // Maximum distance at which points can be earned
     const maxDistance = 50
-    const score = Math.max(0, Math.floor(1000 * (1 - distance / maxDistance)))
+    
+    let score
+    if (distance <= perfectRadius) {
+      // Perfect score within the small radius
+      score = 1000
+    } else {
+      // Quadratic drop-off outside the perfect radius for faster decrease
+      // Adjusted to ensure score = 0 at maxDistance
+      const normalizedDistance = (distance - perfectRadius) / (maxDistance - perfectRadius)
+      score = Math.max(0, Math.floor(1000 * (1 - Math.pow(normalizedDistance, 2))))
+    }
+    
     return {
       score,
       correctLocation: screenshot.location,

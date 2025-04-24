@@ -12,7 +12,7 @@
     <!-- Guess Marker -->
     <div
       v-if="guess"
-      class="absolute guess-marker"
+      class="absolute guess-marker z-10"
       :style="guessStyle"
       :data-x="guess.x"
       :data-y="guess.y"
@@ -58,13 +58,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 
 const props = defineProps({
   mapPath: String,
   correctLocation: Object,
   isUpload: { type: Boolean, default: false },
-  disabled: { type: Boolean, default: false }
+  disabled: { type: Boolean, default: false },
+  initialMarker: { type: Object, default: null }
 })
 
 const emit = defineEmits(['guess'])
@@ -73,9 +74,12 @@ const guess = ref(null)
 
 // Reset the guess when mapPath changes
 watch(() => props.mapPath, () => {
-  guess.value = null
+  if (!props.initialMarker) {
+    guess.value = null
+  }
 }, { immediate: true })
 
+// Handle clicking on the map to place a marker
 const handleClick = (event) => {
   // Don't allow clicks if disabled
   if (props.disabled) return
@@ -85,6 +89,40 @@ const handleClick = (event) => {
   const y = (event.clientY - rect.top) / rect.height * 100
   guess.value = { x, y }
   emit('guess', guess.value)
+}
+
+// Set the initial marker position
+onMounted(() => {
+  if (props.initialMarker) {
+    console.log('Initial marker:', props.initialMarker) // Debug: log the marker
+    
+    // Wait for the image to load
+    const imgElement = mapImage.value
+    if (imgElement) {
+      if (imgElement.complete) {
+        setInitialMarker()
+      } else {
+        imgElement.onload = setInitialMarker
+      }
+    }
+  }
+})
+
+// Function to set the initial marker after image is loaded
+const setInitialMarker = () => {
+  if (!props.initialMarker) return
+  
+  nextTick(() => {
+    // Make sure we have both x and y coordinates
+    const x = typeof props.initialMarker.x === 'number' ? props.initialMarker.x : 0
+    const y = typeof props.initialMarker.y === 'number' ? props.initialMarker.y : 0
+    
+    guess.value = { x, y }
+    console.log('Setting initial marker at:', guess.value) // Debug: log the set marker
+    
+    // Emit the initial guess
+    emit('guess', guess.value)
+  })
 }
 
 const guessStyle = computed(() => {
