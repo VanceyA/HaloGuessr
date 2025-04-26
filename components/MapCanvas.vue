@@ -1,15 +1,18 @@
 <template>
   <div class="relative w-full h-full">
-    <img 
-      :src="mapPath" 
-      alt="Halo Map" 
-      ref="mapImage" 
-      class="w-full h-auto object-contain" 
+    <img
+      :src="mapPath"
+      alt="Halo Map"
+      ref="mapImage"
+      class="w-full h-auto object-contain"
       @click="handleClick"
-      :class="{'cursor-not-allowed': disabled && !guess, 'cursor-default': disabled && guess}"
+      :class="{
+        'cursor-not-allowed': disabled && !guess,
+        'cursor-default': disabled && guess
+      }"
       @load="handleMapLoaded"
     />
-    
+
     <!-- Guess Marker -->
     <div
       v-if="guess"
@@ -19,14 +22,18 @@
       :data-y="guess.y"
     >
       <div class="w-5 h-5 rounded-full flex items-center justify-center">
-        <div class="w-full h-full animate-ping absolute rounded-full opacity-70" 
-             :class="isUpload ? 'bg-blue-400' : 'bg-red-500'"></div>
-        <div class="w-full h-full rounded-full" 
-             :class="isUpload ? 'bg-blue-400' : 'bg-red-500'"></div>
+        <div
+          class="w-full h-full animate-ping absolute rounded-full opacity-70"
+          :class="isUpload ? 'bg-blue-400' : 'bg-red-500'"
+        ></div>
+        <div
+          class="w-full h-full rounded-full"
+          :class="isUpload ? 'bg-blue-400' : 'bg-red-500'"
+        ></div>
         <div class="absolute -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-white rounded-full"></div>
       </div>
     </div>
-    
+
     <!-- Correct Location Marker -->
     <div
       v-if="correctLocation && !isUpload"
@@ -34,19 +41,21 @@
       :style="correctLocationStyle"
     >
       <div class="w-full h-full flex items-center justify-center">
-        <div class="w-full h-full animate-ping absolute rounded-full opacity-70 bg-halo-green"></div>
+        <div
+          class="w-full h-full animate-ping absolute rounded-full opacity-70 bg-halo-green"
+        ></div>
         <div class="w-full h-full rounded-full bg-halo-green"></div>
         <div class="absolute -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-white rounded-full"></div>
       </div>
     </div>
-    
+
     <!-- Distance Line -->
     <div
       v-if="guess && correctLocation && !isUpload"
       class="absolute pointer-events-none"
       :style="lineStyle"
     ></div>
-    
+
     <!-- Distance Label -->
     <div
       v-if="guess && correctLocation && !isUpload"
@@ -69,68 +78,49 @@ const props = defineProps({
   initialMarker: { type: Object, default: null }
 })
 
-// Fix: Add map-loaded to the emit declarations
-const emit = defineEmits(['guess', 'map-loaded'])
+const emit = defineEmits(['select', 'map-loaded'])
 const mapImage = ref(null)
 const guess = ref(null)
 
-// Reset the guess when mapPath changes
-watch(() => props.mapPath, () => {
-  if (!props.initialMarker) {
-    guess.value = null
-  }
-}, { immediate: true })
+// Reset guess when the mapPath changes
+watch(
+  () => props.mapPath,
+  () => {
+    if (!props.initialMarker) {
+      guess.value = null
+    }
+  },
+  { immediate: true }
+)
 
-// Handle clicking on the map to place a marker
-const handleClick = (event) => {
-  // Don't allow clicks if disabled
+const handleClick = (e) => {
   if (props.disabled) return
-  
   const rect = mapImage.value.getBoundingClientRect()
-  const x = (event.clientX - rect.left) / rect.width * 100 // Convert to percentage
-  const y = (event.clientY - rect.top) / rect.height * 100
+  const x = ((e.clientX - rect.left) / rect.width) * 100
+  const y = ((e.clientY - rect.top) / rect.height) * 100
   guess.value = { x, y }
-  emit('guess', guess.value)
+  emit('select', guess.value)
 }
 
-// Add dedicated function to handle map load event
 const handleMapLoaded = () => {
   emit('map-loaded')
 }
 
-// Set the initial marker position
+// If there's an initial marker (e.g. on mount), set it once image is ready
 onMounted(() => {
-  if (props.initialMarker) {
-    console.log('Initial marker:', props.initialMarker) // Debug: log the marker
-    
-    // Wait for the image to load
-    const imgElement = mapImage.value
-    if (imgElement) {
-      if (imgElement.complete) {
-        setInitialMarker()
-      } else {
-        imgElement.onload = setInitialMarker
-      }
-    }
-  }
-})
-
-// Function to set the initial marker after image is loaded
-const setInitialMarker = () => {
   if (!props.initialMarker) return
-  
-  nextTick(() => {
-    // Make sure we have both x and y coordinates
-    const x = typeof props.initialMarker.x === 'number' ? props.initialMarker.x : 0
-    const y = typeof props.initialMarker.y === 'number' ? props.initialMarker.y : 0
-    
-    guess.value = { x, y }
-    console.log('Setting initial marker at:', guess.value) // Debug: log the set marker
-    
-    // Emit the initial guess
-    emit('guess', guess.value)
-  })
-}
+  const img = mapImage.value
+  const setIt = () => {
+    nextTick(() => {
+      guess.value = {
+        x: props.initialMarker.x,
+        y: props.initialMarker.y
+      }
+      emit('select', guess.value)
+    })
+  }
+  img.complete ? setIt() : (img.onload = setIt)
+})
 
 const guessStyle = computed(() => {
   if (!guess.value || !mapImage.value) return {}
@@ -158,22 +148,20 @@ const correctLocationStyle = computed(() => {
 
 const lineStyle = computed(() => {
   if (!guess.value || !props.correctLocation || !mapImage.value) return {}
-  
-  const rect = mapImage.value.getBoundingClientRect();
-  const x1 = (guess.value.x / 100) * rect.width;
-  const y1 = (guess.value.y / 100) * rect.height;
-  const x2 = (props.correctLocation.x / 100) * rect.width;
-  const y2 = (props.correctLocation.y / 100) * rect.height;
-  
-  const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-  const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
-  
+  const rect = mapImage.value.getBoundingClientRect()
+  const x1 = (guess.value.x / 100) * rect.width
+  const y1 = (guess.value.y / 100) * rect.height
+  const x2 = (props.correctLocation.x / 100) * rect.width
+  const y2 = (props.correctLocation.y / 100) * rect.height
+  const length = Math.hypot(x2 - x1, y2 - y1)
+  const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI
   return {
     left: `${x1}px`,
     top: `${y1}px`,
     width: `${length}px`,
     height: '2px',
-    background: 'linear-gradient(to right, rgba(220, 38, 38, 0.8), rgba(123, 244, 66, 0.8))',
+    background:
+      'linear-gradient(to right, rgba(220, 38, 38, 0.8), rgba(123, 244, 66, 0.8))',
     transform: `rotate(${angle}deg)`,
     transformOrigin: '0 0'
   }
@@ -181,17 +169,13 @@ const lineStyle = computed(() => {
 
 const distanceLabelStyle = computed(() => {
   if (!guess.value || !props.correctLocation || !mapImage.value) return {}
-  
-  const rect = mapImage.value.getBoundingClientRect();
-  const x1 = (guess.value.x / 100) * rect.width;
-  const y1 = (guess.value.y / 100) * rect.height;
-  const x2 = (props.correctLocation.x / 100) * rect.width;
-  const y2 = (props.correctLocation.y / 100) * rect.height;
-  
-  // Position label at the middle of the distance line
-  const midX = (x1 + x2) / 2;
-  const midY = (y1 + y2) / 2;
-  
+  const rect = mapImage.value.getBoundingClientRect()
+  const x1 = (guess.value.x / 100) * rect.width
+  const y1 = (guess.value.y / 100) * rect.height
+  const x2 = (props.correctLocation.x / 100) * rect.width
+  const y2 = (props.correctLocation.y / 100) * rect.height
+  const midX = (x1 + x2) / 2
+  const midY = (y1 + y2) / 2
   return {
     left: `${midX}px`,
     top: `${midY}px`
@@ -200,10 +184,9 @@ const distanceLabelStyle = computed(() => {
 
 const calculateDistance = () => {
   if (!guess.value || !props.correctLocation) return 0
-  
-  return Math.sqrt(
-    Math.pow(guess.value.x - props.correctLocation.x, 2) +
-    Math.pow(guess.value.y - props.correctLocation.y, 2)
+  return Math.hypot(
+    guess.value.x - props.correctLocation.x,
+    guess.value.y - props.correctLocation.y
   )
 }
 </script>

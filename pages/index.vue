@@ -1,59 +1,65 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-b from-halo-dark to-black text-gray-200 flex flex-col p-4 md:p-8">
+  <div
+    class="min-h-screen bg-gradient-to-b from-halo-dark to-black text-gray-200
+           flex flex-col p-4 md:p-8 relative"
+  >
     <!-- Modern Header with Subtle Logo -->
     <header class="mb-6 md:mb-8">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+      <div class="flex items-center">
         <!-- Logo Section -->
         <div class="flex items-center space-x-2">
-          <div class="flex items-center">
-            <!-- Halo-inspired shield icon -->
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="mr-3">
-              <path d="M24 6L8 12V24C8 32.8 14.4 41.2 24 44C33.6 41.2 40 32.8 40 24V12L24 6Z" fill="url(#paint0_linear)" />
-              <defs>
-                <linearGradient id="paint0_linear" x1="24" y1="6" x2="24" y2="44" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#7bf442" />
-                  <stop offset="1" stop-color="#52b2bf" />
-                </linearGradient>
-              </defs>
-            </svg>
-            
-            <div>
-              <h1 class="text-3xl font-light tracking-wider">
-                <span class="font-bold text-white">HALO</span>
-                <span class="text-blue-400 opacity-90">GUESSR</span>
-              </h1>
-              <div class="h-0.5 w-full bg-gradient-to-r from-halo-green to-blue-400 rounded"></div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Score Display -->
-        <div class="mt-3 md:mt-0 flex items-center space-x-4">
-          <div class="flex items-center space-x-2 bg-halo-gray/50 rounded-full px-4 py-1.5">
-            <div class="text-gray-400 uppercase text-xs tracking-wider">Total Score</div>
-            <div class="text-xl font-mono font-bold text-halo-green">{{ score }}</div>
-          </div>
-          
-          <div v-if="result" class="flex items-center space-x-2 bg-halo-gray/50 rounded-full px-4 py-1.5">
-            <div class="text-gray-400 uppercase text-xs tracking-wider">Last</div>
-            <div class="text-xl font-mono font-bold text-halo-green">+{{ result.score }}</div>
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 48 48"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            class="mr-3"
+          >
+            <path
+              d="M24 6L8 12V24C8 32.8 14.4 41.2 24 44C33.6 41.2 40 32.8 40 24V12L24 6Z"
+              fill="url(#paint0_linear)"
+            />
+            <defs>
+              <linearGradient
+                id="paint0_linear"
+                x1="24"
+                y1="6"
+                x2="24"
+                y2="44"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop stop-color="#7bf442" />
+                <stop offset="1" stop-color="#52b2bf" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div>
+            <h1 class="text-3xl font-light tracking-wider">
+              <span class="font-bold text-white">HALO</span>
+              <span class="text-blue-400 opacity-90">GUESSR</span>
+            </h1>
+            <div class="h-0.5 w-full bg-gradient-to-r from-halo-green to-blue-400 rounded"></div>
           </div>
         </div>
       </div>
     </header>
 
     <!-- Main Content -->
-    <div v-if="screenshot" class="w-full max-w-7xl mx-auto flex-grow" :class="{'opacity-0': !imagesLoaded}">
-      <!-- Game Area - Grid layout for desktop -->
+    <div
+      v-if="screenshot"
+      class="w-full max-w-7xl mx-auto flex-grow"
+      :class="{ 'opacity-0': !imagesLoaded }"
+    >
       <div class="grid md:grid-cols-5 gap-6 h-full">
-        <!-- Screenshot Container (3/5 width on desktop) -->
+        <!-- Screenshot Container -->
         <div class="md:col-span-3 bg-halo-gray/20 backdrop-blur-sm rounded-lg overflow-hidden shadow-lg">
           <div class="relative h-72 md:h-[450px]">
-            <img 
-              :src="screenshot.screenshotPath" 
-              alt="Halo Screenshot" 
+            <img
+              :src="screenshot.screenshotPath"
+              alt="Halo Screenshot"
               class="w-full h-full object-cover"
-              @load="handleScreenshotLoaded"
+              @load="onScreenshotLoaded"
             />
             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
               <p class="text-white font-medium">
@@ -64,68 +70,159 @@
           </div>
         </div>
 
-        <!-- Map Container (2/5 width on desktop) -->
+        <!-- Map & Guess Container -->
         <div class="md:col-span-2 flex flex-col">
-          <div class="bg-halo-gray/20 backdrop-blur-sm rounded-lg overflow-hidden shadow-lg flex flex-col h-full relative">
+          <!-- Total Score Display (always visible above map) -->
+          <div class="bg-halo-gray/30 backdrop-blur-sm rounded-t-lg p-2 border-b border-halo-blue/30 flex items-center justify-between">
+            <div class="flex items-center">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                class="h-4 w-4 text-halo-green mr-2" 
+                viewBox="0 0 20 20" 
+                fill="currentColor"
+              >
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+              <div class="text-gray-400 uppercase text-xs tracking-wider">Total Score</div>
+            </div>
+            <div class="text-lg font-mono font-bold text-halo-green">{{ score }}</div>
+          </div>
+          
+          <div class="bg-halo-gray/20 backdrop-blur-sm rounded-b-lg overflow-hidden shadow-lg flex flex-col h-full relative">
             <!-- Map Header -->
             <div class="p-3 border-b border-halo-blue/20 flex justify-between items-center">
               <p class="text-blue-300 text-sm uppercase tracking-wider">
-                {{ !hasGuessed ? 'Select location' : result ? 'Result' : 'Processing...' }}
+                {{ !hasGuessed
+                  ? 'Select location'
+                  : result
+                  ? 'Result'
+                  : 'Processing...' }}
               </p>
-              
-              <!-- Integrated Result Info (appears in map header) -->
-              <div v-if="result" class="flex items-center space-x-3">
-                <div class="text-xs text-white">
-                  <span class="text-gray-400">Accuracy: </span> 
-                  <span class="text-halo-green">{{ 100 - calculateDistance(result.correctLocation) }}%</span>
-                </div>
-                <button 
-                  @click="nextScreenshot" 
-                  class="bg-halo-blue hover:bg-blue-700 text-white text-xs font-bold py-1.5 px-3 rounded
-                        transition-all duration-200 flex items-center"
+              <div class="flex items-center space-x-3">
+                <!-- Confirm Guess Button -->
+                <button
+                  v-if="pendingGuess && !hasGuessed"
+                  @click="confirmGuess"
+                  class="bg-halo-blue hover:bg-blue-700 text-white text-xs font-bold
+                         py-1.5 px-3 rounded transition-all duration-200 flex items-center"
                 >
-                  <span>NEXT</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                  CONFIRM
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-3 w-3 ml-1"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </button>
+                <!-- Next Button -->
+                <button
+                  v-if="result"
+                  @click="nextScreenshot"
+                  class="bg-halo-blue hover:bg-blue-700 text-white text-xs font-bold
+                         py-1.5 px-3 rounded transition-all duration-200 flex items-center"
+                >
+                  NEXT
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-3 w-3 ml-1"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1
+                         0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586
+                         11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1
+                         0 010-1.414z"
+                      clip-rule="evenodd"
+                    />
                   </svg>
                 </button>
               </div>
             </div>
             
-            <!-- Map Content -->
+            <!-- Accuracy/Points UI (Always visible above map when results are shown) -->
+            <div v-if="result" class="p-2 bg-black/40 border-b border-halo-blue/30">
+              <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                  <div class="flex items-center">
+                    <div class="text-xs text-gray-400 mr-1">Accuracy:</div>
+                    <div class="text-sm font-bold text-halo-green">{{ accuracy.toFixed(0) }}%</div>
+                  </div>
+                  <div class="h-4 w-px bg-halo-blue/30"></div>
+                  <div class="flex items-center">
+                    <div class="text-xs text-gray-400 mr-1">Points:</div>
+                    <div class="text-sm font-bold text-halo-green">+{{ result.score }}</div>
+                  </div>
+                </div>
+                <div class="flex items-center">
+                  <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden" style="width: 100px">
+                    <div 
+                      class="h-full bg-gradient-to-r from-red-500 to-halo-green"
+                      :style="`width: ${accuracy.toFixed(0)}%`"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Map Canvas -->
             <div class="flex-grow relative">
-              <!-- Processing Overlay -->
-              <div v-if="hasGuessed && !result" class="absolute inset-0 bg-black/70 flex items-center justify-center z-10">
+              <div
+                v-if="hasGuessed && !result"
+                class="absolute inset-0 bg-black/70 flex items-center justify-center z-10"
+              >
                 <div class="animate-pulse text-halo-green font-bold flex items-center">
-                  <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-halo-green" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    class="animate-spin -ml-1 mr-3 h-5 w-5 text-halo-green"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0
+                         0 5.373 0 12h4zm2 5.291A7.962 7.962
+                         0 014 12H0c0 3.042 1.135 5.824 3
+                         7.938l3-2.647z"
+                    ></path>
                   </svg>
                   Processing
                 </div>
               </div>
-              
-              <MapCanvas 
+              <MapCanvas
                 v-if="screenshot"
-                :map-path="screenshot.mapPath" 
-                :correct-location="result?.correctLocation" 
-                @guess="submitGuess"
+                :map-path="screenshot.mapPath"
+                :correct-location="result?.correctLocation"
                 :disabled="hasGuessed"
-                @map-loaded="handleMapLoaded"
+                @map-loaded="onMapLoaded"
+                @select="onSelect"
               />
             </div>
-            
-            <!-- Large Next Button (mobile only, shown at bottom when results are in) -->
+
+            <!-- Next Button (mobile) -->
             <div v-if="result" class="p-3 md:hidden border-t border-halo-blue/20">
-              <button 
-                @click="nextScreenshot" 
-                class="w-full bg-halo-blue hover:bg-blue-700 text-white font-bold py-3 px-6 rounded
-                      transition-all duration-200 flex items-center justify-center"
+              <button
+                @click="nextScreenshot"
+                class="w-full bg-halo-blue hover:bg-blue-700 text-white font-bold
+                       py-3 rounded transition"
               >
-                <span>NEXT LOCATION</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
+                NEXT LOCATION
               </button>
             </div>
           </div>
@@ -133,21 +230,37 @@
       </div>
     </div>
 
-    <!-- Initial Loading State (when there's no screenshot) -->
-    <div v-if="!screenshot && !isLoadingNextLevel" class="flex-grow flex items-center justify-center">
+    <!-- Initial Loading State -->
+    <div
+      v-if="!screenshot && !isLoadingNextLevel"
+      class="flex-grow flex items-center justify-center"
+    >
       <div class="text-center">
-        <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-halo-green mb-4"></div>
+        <div
+          class="inline-block animate-spin rounded-full h-12 w-12
+                 border-t-2 border-b-2 border-halo-green mb-4"
+        ></div>
         <p class="text-lg text-blue-300">Loading Halo location data...</p>
-        <p class="text-sm text-gray-400 mt-2">Please upload locations if none are available.</p>
+        <p class="text-sm text-gray-400 mt-2">
+          Please upload locations if none are available.
+        </p>
       </div>
     </div>
-    
-    <!-- Level Transition or Images Loading Overlay -->
-    <div v-if="isLoadingNextLevel || (screenshot && !imagesLoaded)" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+
+    <!-- Loading Overlay -->
+    <div
+      v-if="isLoadingNextLevel || (screenshot && !imagesLoaded)"
+      class="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+    >
       <div class="text-center">
-        <div class="inline-block animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-halo-green mb-4"></div>
+        <div
+          class="inline-block animate-spin rounded-full h-16 w-16
+                 border-t-2 border-b-2 border-halo-green mb-4"
+        ></div>
         <p class="text-xl text-halo-green font-bold">Loading Next Location</p>
-        <div class="mt-3 w-40 h-1 bg-gray-800 rounded-full mx-auto overflow-hidden">
+        <div
+          class="mt-3 w-40 h-1 bg-gray-800 rounded-full mx-auto overflow-hidden"
+        >
           <div class="h-full bg-halo-green animate-pulse"></div>
         </div>
       </div>
@@ -156,7 +269,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import MapCanvas from '~/components/MapCanvas.vue'
 
 const screenshot = ref(null)
@@ -167,118 +280,77 @@ const currentId = ref(null)
 const isLoadingNextLevel = ref(false)
 const screenshotLoaded = ref(false)
 const mapLoaded = ref(false)
+const pendingGuess = ref(null)
 
-// Computed property to determine if all images are loaded
-const imagesLoaded = computed(() => {
-  return screenshotLoaded.value && mapLoaded.value
-})
+const imagesLoaded = computed(() => screenshotLoaded.value && mapLoaded.value)
 
-// Reset loading states when screenshot changes
 watch(screenshot, () => {
   screenshotLoaded.value = false
   mapLoaded.value = false
-})
+  pendingGuess.value = null
+  result.value = null
+}, { immediate: false })
 
-const fetchScreenshot = async () => {
+async function fetchScreenshot() {
+  hasGuessed.value = false
   try {
-    hasGuessed.value = false
-    result.value = null
-    
-    // Pass the current ID to avoid getting the same screenshot again
-    const response = await $fetch('/api/screenshots/random', {
+    const res = await $fetch('/api/screenshots/random', {
       params: { exclude: currentId.value }
     })
-    
-    if (response.error) {
-      console.error(response.error)
-      screenshot.value = null
-    } else {
-      screenshot.value = response
-      currentId.value = response.id
+    if (!res.error) {
+      screenshot.value = res
+      currentId.value = res.id
     }
-  } catch (error) {
-    console.error(error)
-  } finally {
-    // We don't turn off loading state here
-    // It will be turned off once images are loaded
-    if (!screenshot.value) {
-      isLoadingNextLevel.value = false
-    }
+  } catch (e) {
+    console.error(e)
   }
 }
 
-const handleScreenshotLoaded = () => {
+function onScreenshotLoaded() {
   screenshotLoaded.value = true
-  checkAllImagesLoaded()
+  if (imagesLoaded.value) isLoadingNextLevel.value = false
 }
 
-const handleMapLoaded = () => {
+function onMapLoaded() {
   mapLoaded.value = true
-  checkAllImagesLoaded()
+  if (imagesLoaded.value) isLoadingNextLevel.value = false
 }
 
-const checkAllImagesLoaded = () => {
-  if (imagesLoaded.value) {
-    // Only turn off loading when both images are ready
-    isLoadingNextLevel.value = false
-  }
+function onSelect(coords) {
+  pendingGuess.value = coords
 }
 
-const submitGuess = async (guess) => {
-  // Prevent multiple submissions
-  if (hasGuessed.value) return
-  
+async function confirmGuess() {
+  if (!pendingGuess.value || hasGuessed.value) return
   hasGuessed.value = true
-  
   try {
-    const response = await $fetch('/api/guess', {
+    const res = await $fetch('/api/guess', {
       method: 'POST',
-      body: { id: screenshot.value.id, guess }
+      body: { id: screenshot.value.id, guess: pendingGuess.value }
     })
-    if (response.error) {
-      console.error(response.error)
-    } else {
-      result.value = response
-      score.value += response.score
+    if (!res.error) {
+      result.value = res
+      score.value += res.score
     }
-  } catch (error) {
-    console.error(error)
+  } catch (e) {
+    console.error(e)
   }
 }
 
-const nextScreenshot = () => {
-  // Show loading state
+function nextScreenshot() {
   isLoadingNextLevel.value = true
-  
-  // Reset image loading states
   screenshotLoaded.value = false
   mapLoaded.value = false
-  
-  // Add a slight delay to allow the loading UI to render
-  setTimeout(() => {
-    fetchScreenshot()
-  }, 100)
+  setTimeout(fetchScreenshot, 100)
 }
 
-const calculateDistance = (correctLocation) => {
-  if (!correctLocation) return 0
-  
-  // Get the guess from the MapCanvas component
-  const guessElement = document.querySelector('.guess-marker')
-  if (!guessElement) return 0
-  
-  const guessX = parseFloat(guessElement.dataset.x)
-  const guessY = parseFloat(guessElement.dataset.y)
-  
-  const distance = Math.sqrt(
-    Math.pow(guessX - correctLocation.x, 2) +
-    Math.pow(guessY - correctLocation.y, 2)
-  ).toFixed(1)
-  
-  return distance
-}
-
-onMounted(() => {
-  fetchScreenshot()
+const accuracy = computed(() => {
+  if (!result.value?.correctLocation || !pendingGuess.value) return 0
+  const dx = pendingGuess.value.x - result.value.correctLocation.x
+  const dy = pendingGuess.value.y - result.value.correctLocation.y
+  // you can invert or scale this however you like; here smaller distance → higher %
+  return Math.max(0, 100 - Math.hypot(dx, dy))
 })
+
+onMounted(fetchScreenshot)
 </script>
