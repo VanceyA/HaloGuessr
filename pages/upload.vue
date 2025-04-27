@@ -169,12 +169,21 @@
             class="w-full bg-halo-blue hover:bg-blue-700 text-halo-green font-bold py-3 px-6 rounded-md
                   transition-all duration-200 transform hover:scale-105 flex items-center justify-center
                   disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-halo-blue"
-            :disabled="!screenshotFile || !mapFile || !levelName || !coordinates || !haloGame"
+            :disabled="!screenshotFile || !mapFile || !levelName || !coordinates || !haloGame || isUploading"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-            </svg>
-            <span>UPLOAD LOCATION</span>
+            <template v-if="isUploading">
+              <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-halo-green" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>UPLOADING...</span>
+            </template>
+            <template v-else>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+              </svg>
+              <span>UPLOAD LOCATION</span>
+            </template>
           </button>
           
           <div v-if="uploadStatus" 
@@ -201,6 +210,7 @@ const coordinates = ref(null)
 const uploadStatus = ref('')
 const gameMode = ref('Multiplayer')
 const haloGame = ref('')
+const isUploading = ref(false)
 
 const haloGames = [
   'Halo: Combat Evolved',
@@ -244,6 +254,10 @@ const upload = async () => {
     uploadStatus.value = 'Please fill all fields and select a location'
     return
   }
+  
+  // Set uploading state to true to disable the button
+  isUploading.value = true
+  
   const formData = new FormData()
   formData.append('screenshot', screenshotFile.value)
   formData.append('mapImage', mapFile.value)
@@ -253,11 +267,13 @@ const upload = async () => {
   formData.append('haloGame', haloGame.value)
   formData.append('x', coordinates.value.x)
   formData.append('y', coordinates.value.y)
+  
   try {
     const response = await $fetch('/api/upload', {
       method: 'POST',
       body: formData
     })
+    
     if (response.success) {
       uploadStatus.value = 'Upload successful'
       screenshotFile.value = null
@@ -272,6 +288,9 @@ const upload = async () => {
   } catch (error) {
     console.error(error)
     uploadStatus.value = 'Upload failed'
+  } finally {
+    // Set uploading state back to false regardless of success or failure
+    isUploading.value = false
   }
 }
 </script>

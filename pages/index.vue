@@ -265,11 +265,23 @@
         </div>
       </div>
     </div>
+
+    <!-- Mod Info Panel (only visible when activated) -->
+    <div 
+      v-if="showModInfo && screenshot" 
+      class="fixed bottom-4 right-4 bg-black/80 text-halo-green p-3 rounded shadow-lg z-50 border border-halo-blue/50"
+    >
+      <div class="text-xs uppercase tracking-wider text-blue-400 mb-1">Mod Info</div>
+      <div class="font-mono">ID: {{ screenshot.id }}</div>
+      <div class="mt-2 text-xs text-gray-400">
+        Press {{ isMac ? '⌘' : 'Ctrl' }}+K to hide
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import MapCanvas from '~/components/MapCanvas.vue'
 
 const screenshot = ref(null)
@@ -281,6 +293,8 @@ const isLoadingNextLevel = ref(false)
 const screenshotLoaded = ref(false)
 const mapLoaded = ref(false)
 const pendingGuess = ref(null)
+const showModInfo = ref(false)
+const isMac = ref(false)
 
 const imagesLoaded = computed(() => screenshotLoaded.value && mapLoaded.value)
 
@@ -344,6 +358,25 @@ function nextScreenshot() {
   setTimeout(fetchScreenshot, 100)
 }
 
+// Detect if user is on Mac
+function detectPlatform() {
+  if (typeof navigator !== 'undefined') {
+    isMac.value = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+  }
+}
+
+// Cross-platform mod tools keyboard shortcut handler
+function handleKeyDown(e) {
+  // Cmd+M on Mac, Ctrl+K on Windows/Linux
+  if ((isMac.value ? e.metaKey : e.ctrlKey) && e.key === 'k') {
+    e.preventDefault() // Prevent default browser behavior
+    if (screenshot.value) {
+      console.log('Screenshot ID:', screenshot.value.id)
+      showModInfo.value = !showModInfo.value
+    }
+  }
+}
+
 const accuracy = computed(() => {
   if (!result.value?.correctLocation || !pendingGuess.value) return 0
   const dx = pendingGuess.value.x - result.value.correctLocation.x
@@ -352,5 +385,13 @@ const accuracy = computed(() => {
   return Math.max(0, 100 - Math.hypot(dx, dy))
 })
 
-onMounted(fetchScreenshot)
+onMounted(() => {
+  fetchScreenshot()
+  detectPlatform()
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+})
 </script>
