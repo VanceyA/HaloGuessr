@@ -150,14 +150,19 @@ const error = ref(null)
 onMounted(async () => {
   try {
     const response = await $fetch('/api/screenshots/list')
-    if (response.error) {
-      error.value = response.error
-    } else {
+    
+    // Check if response is an array (success) or has error property
+    if (Array.isArray(response)) {
       // Sort by level name 
-      levels.value = response.sort((a, b) => a.mapName.localeCompare(b.mapName))
+      levels.value = response.sort((a, b) => a.mapName?.localeCompare(b.mapName) || 0)
+    } else if (response.error) {
+      error.value = response.details 
+        ? `${response.error}: ${response.details}` 
+        : response.error
+      console.error('API Error:', response)
     }
   } catch (err) {
-    console.error(err)
+    console.error('Request failed:', err)
     error.value = 'Failed to load levels. Please try again.'
   } finally {
     loading.value = false
