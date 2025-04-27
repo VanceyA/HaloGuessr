@@ -2,6 +2,7 @@ import { defineEventHandler } from 'h3'
 import { Redis } from '@upstash/redis'
 
 export default defineEventHandler(async (event) => {
+  console.log('Screenshots list API called')
   const config = useRuntimeConfig()
   
   // Check if Redis credentials are available

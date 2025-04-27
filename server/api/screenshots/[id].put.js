@@ -1,7 +1,13 @@
 import { defineEventHandler, readBody } from 'h3'
 import { Redis } from '@upstash/redis'
+import verifyAdmin from '../../utils/verifyAdmin'
 
 export default defineEventHandler(async (event) => {
+  // Verify admin authentication
+  if (!verifyAdmin(event)) {
+    return { error: 'Unauthorized', status: 401 }
+  }
+  
   try {
     const id = event.context.params.id
     if (!id) {

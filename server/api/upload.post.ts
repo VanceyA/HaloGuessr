@@ -2,8 +2,14 @@ import { defineEventHandler, readMultipartFormData } from 'h3'
 import { put } from '@vercel/blob'
 import { Redis } from '@upstash/redis'
 import { nanoid } from 'nanoid'
+import verifyAdmin from '../utils/verifyAdmin'
 
 export default defineEventHandler(async (event) => {
+  // Verify admin authentication
+  if (!verifyAdmin(event)) {
+    return { error: 'Unauthorized', status: 401 }
+  }
+  
   try {
     const config = useRuntimeConfig()
     const redis = new Redis({

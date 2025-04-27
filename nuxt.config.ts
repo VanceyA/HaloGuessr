@@ -9,6 +9,12 @@ export default defineNuxtConfig({
   runtimeConfig: {
     upstashRedisUrl: process.env.KV_REST_API_URL,
     upstashRedisToken: process.env.KV_REST_API_TOKEN,
-    blobReadWriteToken: process.env.BLOB_READ_WRITE_TOKEN
+    blobReadWriteToken: process.env.BLOB_READ_WRITE_TOKEN,
+    adminPassword: process.env.ADMIN_PASSWORD,
+    jwtSecret: process.env.JWT_SECRET,
+  },
+  routeRules: {
+    '/admin/**': { ssr: false },
+    '/upload': { ssr: false }
   }
 })

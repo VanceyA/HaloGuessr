@@ -152,9 +152,12 @@
         
         <!-- Map Selection (if map is uploaded) -->
         <div v-if="mapPreview" class="mb-6">
-          <label class="block text-blue-300 mb-2 font-medium">Mark the exact location on the map:</label>
+          <label class="block text-blue-300 mb-2 font-medium">
+            Mark the exact location on the map: 
+            <span class="text-red-300" v-if="!coordinates">*Required</span>
+          </label>
           <div class="rounded-lg overflow-hidden border border-blue-400/50">
-            <MapCanvas :map-path="mapPreview" :is-upload="true" @guess="setCoordinates" />
+            <MapCanvas :map-path="mapPreview" :is-upload="true" @select="setCoordinates" />
           </div>
           <p v-if="coordinates" class="mt-2 text-blue-300">
             Selected: X: <span class="text-halo-green">{{ coordinates.x.toFixed(0) }}%</span>, 
@@ -169,7 +172,7 @@
             class="w-full bg-halo-blue hover:bg-blue-700 text-halo-green font-bold py-3 px-6 rounded-md
                   transition-all duration-200 transform hover:scale-105 flex items-center justify-center
                   disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-halo-blue"
-            :disabled="!screenshotFile || !mapFile || !levelName || !coordinates || !haloGame || isUploading"
+            :disabled="formIncomplete || isUploading"
           >
             <template v-if="isUploading">
               <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-halo-green" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -199,8 +202,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import MapCanvas from '~/components/MapCanvas.vue'
+
+definePageMeta({
+  middleware: ['admin']
+})
 
 const screenshotFile = ref(null)
 const mapFile = ref(null)
@@ -237,26 +244,46 @@ const mapPreview = computed(() => {
   return null
 })
 
+// Create a computed property to check if the form is complete
+const formIncomplete = computed(() => {
+  return !screenshotFile.value || 
+         !mapFile.value || 
+         !levelName.value || 
+         !coordinates.value || 
+         !haloGame.value
+})
+
+// Reset coordinates when map is changed
+watch(mapFile, () => {
+  coordinates.value = null
+})
+
 const onScreenshotChange = (event) => {
-  screenshotFile.value = event.target.files[0]
+  if (event.target.files && event.target.files.length > 0) {
+    screenshotFile.value = event.target.files[0]
+  }
 }
 
 const onMapChange = (event) => {
-  mapFile.value = event.target.files[0]
+  if (event.target.files && event.target.files.length > 0) {
+    mapFile.value = event.target.files[0]
+  }
 }
 
 const setCoordinates = (coords) => {
+  console.log('Coordinates set:', coords)
   coordinates.value = coords
 }
 
 const upload = async () => {
-  if (!screenshotFile.value || !mapFile.value || !levelName.value || !coordinates.value || !haloGame.value) {
+  if (formIncomplete.value) {
     uploadStatus.value = 'Please fill all fields and select a location'
     return
   }
   
   // Set uploading state to true to disable the button
   isUploading.value = true
+  uploadStatus.value = ''
   
   const formData = new FormData()
   formData.append('screenshot', screenshotFile.value)

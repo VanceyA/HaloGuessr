@@ -27,10 +27,16 @@
           </div>
         </div>
         
-        <div class="mt-3 md:mt-0">
+        <div class="mt-3 md:mt-0 flex space-x-3">
           <span class="text-sm text-gray-400 bg-halo-gray/50 py-1.5 px-4 rounded-full uppercase tracking-wider">
             Admin: Manage Levels
           </span>
+          <button 
+            @click="logout" 
+            class="text-sm text-red-400 bg-halo-gray/50 py-1.5 px-4 rounded-full uppercase tracking-wider hover:bg-halo-gray/70 transition-colors"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </header>
@@ -50,6 +56,80 @@
             </svg>
             <span>ADD NEW LEVEL</span>
           </NuxtLink>
+        </div>
+        
+        <!-- Search and Filters Section -->
+        <div class="mb-6 space-y-4">
+          <!-- Search Box -->
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              placeholder="Search levels..." 
+              class="w-full pl-10 pr-4 py-2 bg-halo-dark/70 border border-blue-400/50 focus:border-halo-green rounded-lg outline-none focus:ring-1 focus:ring-halo-green text-white"
+            />
+          </div>
+          
+          <!-- Filters -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Map Filter -->
+            <div>
+              <label class="block text-blue-300 text-sm mb-1">Map Name</label>
+              <select 
+                v-model="selectedMap" 
+                class="w-full px-3 py-2 bg-halo-dark/70 border border-blue-400/50 focus:border-halo-green rounded-lg outline-none focus:ring-1 focus:ring-halo-green text-white appearance-none"
+              >
+                <option value="">All Maps</option>
+                <option v-for="map in uniqueMaps" :key="map" :value="map">{{ map }}</option>
+              </select>
+            </div>
+            
+            <!-- Game Filter -->
+            <div>
+              <label class="block text-blue-300 text-sm mb-1">Halo Game</label>
+              <select 
+                v-model="selectedGame" 
+                class="w-full px-3 py-2 bg-halo-dark/70 border border-blue-400/50 focus:border-halo-green rounded-lg outline-none focus:ring-1 focus:ring-halo-green text-white appearance-none"
+              >
+                <option value="">All Games</option>
+                <option v-for="game in uniqueGames" :key="game" :value="game">{{ game }}</option>
+              </select>
+            </div>
+            
+            <!-- Mode Filter -->
+            <div>
+              <label class="block text-blue-300 text-sm mb-1">Game Mode</label>
+              <select 
+                v-model="selectedMode" 
+                class="w-full px-3 py-2 bg-halo-dark/70 border border-blue-400/50 focus:border-halo-green rounded-lg outline-none focus:ring-1 focus:ring-halo-green text-white appearance-none"
+              >
+                <option value="">All Modes</option>
+                <option v-for="mode in uniqueModes" :key="mode" :value="mode">{{ mode }}</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Filter Stats & Reset Button -->
+          <div class="flex justify-between items-center">
+            <div class="text-sm text-gray-400">
+              Showing {{ filteredLevels.length }} of {{ levels.length }} levels
+            </div>
+            <button 
+              v-if="isFiltered" 
+              @click="resetFilters" 
+              class="text-blue-400 hover:text-halo-green transition-colors text-sm flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Reset Filters
+            </button>
+          </div>
         </div>
         
         <!-- Loading State -->
@@ -78,11 +158,29 @@
           </NuxtLink>
         </div>
         
+        <!-- No Results After Filtering -->
+        <div v-else-if="levels.length && !filteredLevels.length" class="bg-halo-gray/20 rounded-lg p-8 text-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <h3 class="text-xl text-blue-300 mb-2">No Matching Levels</h3>
+          <p class="text-gray-400 mb-6">Try adjusting your search or filters.</p>
+          <button 
+            @click="resetFilters" 
+            class="bg-halo-blue hover:bg-blue-700 text-white font-bold py-2 px-6 rounded inline-flex items-center"
+          >
+            <span>Reset Filters</span>
+          </button>
+        </div>
+        
         <!-- Levels Table -->
-        <div v-else class="overflow-hidden rounded-lg border border-blue-400/30">
+        <div v-else-if="filteredLevels.length" class="overflow-hidden rounded-lg border border-blue-400/30">
           <table class="min-w-full divide-y divide-blue-400/30">
             <thead class="bg-halo-dark">
               <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blue-300 uppercase tracking-wider">
+                  Id
+                </th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-blue-300 uppercase tracking-wider">
                   Level Name
                 </th>
@@ -101,7 +199,10 @@
               </tr>
             </thead>
             <tbody class="bg-halo-gray/10 divide-y divide-blue-400/30">
-              <tr v-for="level in levels" :key="level.id" class="hover:bg-halo-blue/10 transition-colors">
+              <tr v-for="level in filteredLevels" :key="level.id" class="hover:bg-halo-blue/10 transition-colors">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
+                  {{ level.id }}
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-white">
                   {{ level.levelName }}
                 </td>
@@ -141,20 +242,96 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
+// Use the admin middleware
+definePageMeta({
+  middleware: ['admin']
+})
+
+const router = useRouter()
 const levels = ref([])
 const loading = ref(true)
 const error = ref(null)
+const searchQuery = ref('')
+const selectedMap = ref('')
+const selectedGame = ref('')
+const selectedMode = ref('')
+
+// Add logout function
+const logout = async () => {
+  try {
+    await $fetch('/api/auth/logout', { method: 'POST' })
+    // Clear the token from cookie (though the backend already did this)
+    useCookie('admin-token').value = null
+    // Redirect to home page
+    router.push('/')
+  } catch (error) {
+    console.error('Logout error:', error)
+  }
+}
+
+// Extract unique values for filters
+const uniqueMaps = computed(() => {
+  const maps = [...new Set(levels.value.map(level => level.mapName).filter(Boolean))]
+  return maps.sort()
+})
+
+const uniqueGames = computed(() => {
+  const games = [...new Set(levels.value.map(level => level.haloGame).filter(Boolean))]
+  return games.sort()
+})
+
+const uniqueModes = computed(() => {
+  const modes = [...new Set(levels.value.map(level => level.gameMode).filter(Boolean))]
+  return modes.sort()
+})
+
+// Check if any filters are applied
+const isFiltered = computed(() => {
+  return searchQuery.value !== '' || selectedMap.value !== '' || 
+         selectedGame.value !== '' || selectedMode.value !== ''
+})
+
+// Filter levels based on search and filters
+const filteredLevels = computed(() => {
+  return levels.value.filter(level => {
+    // Search across all fields
+    const searchMatches = !searchQuery.value || 
+      Object.values(level).some(value => 
+        value && value.toString().toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    
+    // Apply filters
+    const mapMatches = !selectedMap.value || level.mapName === selectedMap.value
+    const gameMatches = !selectedGame.value || level.haloGame === selectedGame.value
+    const modeMatches = !selectedMode.value || level.gameMode === selectedMode.value
+    
+    return searchMatches && mapMatches && gameMatches && modeMatches
+  })
+})
+
+// Reset all filters
+const resetFilters = () => {
+  searchQuery.value = ''
+  selectedMap.value = ''
+  selectedGame.value = ''
+  selectedMode.value = ''
+}
 
 onMounted(async () => {
+  console.log('Admin levels page mounted, fetching data...')
   try {
+    console.log('Calling screenshots list API...')
     const response = await $fetch('/api/screenshots/list')
+    console.log('API response received:', response)
     
     // Check if response is an array (success) or has error property
     if (Array.isArray(response)) {
       // Sort by level name 
       levels.value = response.sort((a, b) => a.mapName?.localeCompare(b.mapName) || 0)
+      console.log('Levels loaded:', levels.value.length)
     } else if (response.error) {
       error.value = response.details 
         ? `${response.error}: ${response.details}` 
