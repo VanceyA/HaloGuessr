@@ -296,7 +296,7 @@ const upload = async () => {
   formData.append('y', coordinates.value.y)
   
   try {
-    const response = await $fetch('/api/upload', {
+    const response = await $fetch('/api/admin/levels/upload', {
       method: 'POST',
       body: formData
     })

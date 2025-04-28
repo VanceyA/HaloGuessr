@@ -308,9 +308,7 @@ watch(screenshot, () => {
 async function fetchScreenshot() {
   hasGuessed.value = false
   try {
-    const res = await $fetch('/api/screenshots/random', {
-      params: { exclude: currentId.value }
-    })
+    const res = await $fetch('/api/levels/random')
     if (!res.error) {
       screenshot.value = res
       currentId.value = res.id

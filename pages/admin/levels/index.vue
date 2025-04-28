@@ -324,7 +324,7 @@ onMounted(async () => {
   console.log('Admin levels page mounted, fetching data...')
   try {
     console.log('Calling screenshots list API...')
-    const response = await $fetch('/api/screenshots/list')
+    const response = await $fetch('/api/admin/levels/list')
     console.log('API response received:', response)
     
     // Check if response is an array (success) or has error property

@@ -291,7 +291,7 @@ const updateLevel = async () => {
   updateStatus.value = ''
   
   try {
-    const response = await $fetch(`/api/screenshots/${id}`, {
+    const response = await $fetch(`/api/admin/levels/${id}`, {
       method: 'PUT',
       body: {
         mapName: level.value.mapName,
@@ -329,7 +329,7 @@ const deleteLevel = async () => {
   isDeleting.value = true
   
   try {
-    const response = await $fetch(`/api/screenshots/${id}`, {
+    const response = await $fetch(`/api/admin/levels/${id}`, {
       method: 'DELETE'
     })
     
@@ -349,7 +349,7 @@ const deleteLevel = async () => {
 
 onMounted(async () => {
   try {
-    const response = await $fetch(`/api/screenshots/${id}`)
+    const response = await $fetch(`/api/admin/levels/${id}`)
     if (response.error) {
       error.value = response.error
     } else {

@@ -7,11 +7,12 @@ export default defineNuxtConfig({
     preset: 'vercel'
   },
   runtimeConfig: {
-    upstashRedisUrl: process.env.KV_REST_API_URL,
-    upstashRedisToken: process.env.KV_REST_API_TOKEN,
     blobReadWriteToken: process.env.BLOB_READ_WRITE_TOKEN,
     adminPassword: process.env.ADMIN_PASSWORD,
     jwtSecret: process.env.JWT_SECRET,
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   },
   routeRules: {
     '/admin/**': { ssr: false },
