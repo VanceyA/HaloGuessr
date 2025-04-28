@@ -3,8 +3,6 @@ import { defineEventHandler } from 'h3'
 import { useSupabase } from '@/server/utils/supabase'; // Your Supabase client helper
 
 export default defineEventHandler(async (event) => {
-  console.log('Admin list levels API called'); // Renamed from listScreenshots
-
   try {
     const supabase = useSupabase(); // Get Supabase client
 
@@ -21,8 +19,6 @@ export default defineEventHandler(async (event) => {
         details: error.message
        }
     }
-
-    console.log(`Retrieved ${levels.length} levels from Supabase`);
 
     // Supabase returns the data directly as an array of objects
     return levels;

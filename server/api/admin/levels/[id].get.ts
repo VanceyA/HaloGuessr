@@ -33,7 +33,6 @@ export default defineEventHandler(async (event) => {
        level.location = { x: 0, y: 0 }; // Set default if invalid
     }
 
-    console.log(`Successfully fetched level with ID: ${id}`);
     return level; // Return the level object
 
   } catch (error) {

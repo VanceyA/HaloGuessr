@@ -33,8 +33,6 @@ export default defineEventHandler(async (event) => {
       // Do NOT include 'id', 'screenshotPath', 'mapPath' here as they shouldn't be changed by this endpoint.
     };
 
-    console.log(`Attempting to update level ID: ${id} with data:`, updatedData);
-
     // *** Replace redis.get + redis.set with Supabase update ***
     const { data, error } = await supabase
       .from('levels') // Your table name
@@ -58,7 +56,6 @@ export default defineEventHandler(async (event) => {
          return { error: 'Level not found' };
     }
 
-    console.log(`Successfully updated level with ID: ${id}`);
     return { success: true };
 
   } catch (error) {

@@ -81,8 +81,6 @@ export default defineEventHandler(async (event) => {
       return { error: 'Failed to save level metadata to database' };
     }
 
-    console.log(`Successfully uploaded and saved level with ID: ${id}`);
-
     return { success: true, id: data ? data[0].id : id }; // Return the id
   } catch (error) {
     console.error('Upload failed:', error);

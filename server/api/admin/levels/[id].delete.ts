@@ -17,9 +17,6 @@ export default defineEventHandler(async (event) => {
 
     const supabase = useSupabase(); // Get Supabase client
 
-    // *** Replace redis.exists + redis.del with Supabase delete ***
-    console.log(`Attempting to delete level with ID: ${id}`);
-
     // Perform the delete operation
     const { error, count } = await supabase
       .from('levels') // Your table name
@@ -42,7 +39,6 @@ export default defineEventHandler(async (event) => {
         return { error: 'Level not found', status: 404 }; // Return 404 if nothing was deleted
     }
 
-    console.log(`Successfully deleted level with ID: ${id}. Deleted count: ${count}`);
     return { success: true, message: 'Level deleted successfully' };
 
   } catch (error) {
