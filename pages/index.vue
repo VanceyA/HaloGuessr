@@ -4,7 +4,7 @@
            flex flex-col p-4 md:p-8 relative"
   >
     <!-- Modern Header with Subtle Logo -->
-    <header class="mb-6 md:mb-8">
+    <header class="mb-6 md:mb-8 flex items-center justify-between">
       <div class="flex items-center">
         <!-- Logo Section -->
         <div class="flex items-center space-x-2">
@@ -43,6 +43,15 @@
           </div>
         </div>
       </div>
+      <a
+        href="https://ko-fi.com/haloguessr"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="bg-halo-green hover:bg-lime-500 text-black font-bold py-2 px-4 rounded-full shadow-md transition-colors duration-300 z-50"
+      >
+        Donate
+        <font-awesome-icon class="ml-2" :icon="['fas', 'donate']" />
+      </a>
     </header>
 
     <!-- Main Content -->

@@ -1,8 +1,19 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
-  modules: ['@nuxtjs/tailwindcss'],
-  css: ['~/assets/css/tailwind.css'],
+  modules: [
+    '@nuxtjs/tailwindcss',
+    ['@vesp/nuxt-fontawesome', {
+      icons: [
+        'free-solid-svg-icons',
+        'fas',
+      ]
+    }]
+  ],
+  css: [
+    '~/assets/css/tailwind.css',
+    '@fortawesome/fontawesome-svg-core/styles.css'
+  ],
   nitro: {
     preset: 'vercel'
   },
