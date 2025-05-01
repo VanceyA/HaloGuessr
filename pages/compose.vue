@@ -125,11 +125,11 @@
                 <span v-if="game.disabled" class="text-xs text-red-400/70 ml-1">(Coming soon)</span>
               </button>
             </div>
-             <p class="text-xs text-gray-500 mt-2">Only Halo: CE and Halo 2 are currently enabled.</p>
+            <p class="text-xs text-gray-500 mt-2">Only Halo: CE and Halo 2 are currently enabled.</p>
           </div>
 
           <!-- Time Limit -->
-          <div>
+          <!-- <div>
             <label class="block text-blue-300 text-sm uppercase tracking-wider mb-3">
               Time Limit Per Round
             </label>
@@ -145,10 +145,10 @@
                 {{ time.label }}
               </button>
             </div>
-          </div>
+          </div> -->
 
           <!-- Difficulty -->
-          <div>
+          <!-- <div>
             <label class="block text-blue-300 text-sm uppercase tracking-wider mb-3">
               Difficulty
             </label>
@@ -164,7 +164,7 @@
                 {{ difficulty }}
               </button>
             </div>
-          </div>
+          </div> -->
 
           <!-- Start Game Button -->
           <div class="pt-4">
