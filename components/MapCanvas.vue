@@ -21,7 +21,8 @@
       :data-x="guess.x"
       :data-y="guess.y"
     >
-      <div class="w-5 h-5 rounded-full flex items-center justify-center">
+      <!-- Changed w-5 h-5 to w-3 h-3 -->
+      <div class="w-3 h-3 rounded-full flex items-center justify-center">
         <div
           class="w-full h-full animate-ping absolute rounded-full opacity-70"
           :class="isUpload ? 'bg-blue-400' : 'bg-red-500'"
@@ -30,22 +31,29 @@
           class="w-full h-full rounded-full"
           :class="isUpload ? 'bg-blue-400' : 'bg-red-500'"
         ></div>
-        <div class="absolute -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-white rounded-full"></div>
+        <!-- Changed w-1.5 h-1.5 to w-1 h-1 -->
+        <div
+          class="absolute -translate-x-1/2 -translate-y-1/2 w-1 h-1 bg-white rounded-full"
+        ></div>
       </div>
     </div>
 
     <!-- Correct Location Marker -->
     <div
       v-if="correctLocation && !isUpload"
-      class="absolute w-5 h-5 rounded-full z-10"
+      class="absolute z-10"
       :style="correctLocationStyle"
     >
-      <div class="w-full h-full flex items-center justify-center">
+      <!-- Changed w-5 h-5 to w-3 h-3 -->
+      <div class="w-3 h-3 rounded-full flex items-center justify-center">
         <div
           class="w-full h-full animate-ping absolute rounded-full opacity-70 bg-halo-green"
         ></div>
         <div class="w-full h-full rounded-full bg-halo-green"></div>
-        <div class="absolute -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-white rounded-full"></div>
+        <!-- Changed w-1.5 h-1.5 to w-1 h-1 -->
+        <div
+          class="absolute -translate-x-1/2 -translate-y-1/2 w-1 h-1 bg-white rounded-full"
+        ></div>
       </div>
     </div>
 
