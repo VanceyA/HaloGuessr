@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
       if (field.name === 'levelName') levelName = field.data.toString();
       if (field.name === 'gameMode') gameMode = field.data.toString();
       if (field.name === 'haloGame') haloGame = field.data.toString();
-      if (field.name === 'mapName') mapName = field.data.toString();
+      if (field.name === 'mapName') mapName = field.data.toString().trim();
       if (field.name === 'x') x = field.data.toString();
       if (field.name === 'y') y = field.data.toString();
       if (field.name === 'screenshot') screenshotFile = field;

@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
       mapName: body.mapName,
       levelName: body.levelName,
       gameMode: body.gameMode,
-      haloGame: body.haloGame,
+      haloGame: body.haloGame.trim(),
       location: body.location, // Stored as JSONB. Supabase handles updating JSONB fields.
       // Do NOT include 'id', 'screenshotPath', 'mapPath' here as they shouldn't be changed by this endpoint.
     };
