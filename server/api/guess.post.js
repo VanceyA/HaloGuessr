@@ -1,139 +1,148 @@
 // server/api/guess.post.js
 import { defineEventHandler, readBody } from 'h3';
-import { useSupabase } from '../utils/supabase';
+import { useSupabase } from '../utils/supabase'; // Adjust path if needed
+
+// Helper function for score calculation
+function calculateScore(guess, correctLocation) {
+    // *** If guess is null (timeout), score is 0 ***
+    if (guess === null) {
+        return 0;
+    }
+    // Original validation and calculation
+    if (!guess || !correctLocation || typeof guess.x !== 'number' || typeof correctLocation.x !== 'number') {
+        console.warn("Invalid input for score calculation:", { guess, correctLocation });
+        return 0; // Invalid input
+    }
+    const distance = Math.hypot(guess.x - correctLocation.x, guess.y - correctLocation.y);
+    const perfectRadius = 3;
+    const maxDistance = 50;
+
+    if (distance <= perfectRadius) return 1000;
+    if (distance > maxDistance) return 0;
+
+    const normalizedDistance = (distance - perfectRadius) / (maxDistance - perfectRadius);
+    return Math.max(0, Math.floor(1000 * (1 - Math.pow(normalizedDistance, 2))));
+}
+
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
-    const { id, guess, sessionId } = body;
-    
-    if (!id || !guess || typeof guess.x !== 'number' || typeof guess.y !== 'number') {
-      return { error: 'Missing or invalid input parameters' };
+    const { id: levelId, guess, sessionId } = body;
+
+    // --- Modified Input Validation ---
+    // Level ID is always required.
+    // Guess can be null (for timeout) or must be an object with x/y numbers.
+    if (!levelId || (guess !== null && (typeof guess !== 'object' || typeof guess.x !== 'number' || typeof guess.y !== 'number'))) {
+      console.error("Invalid guess input:", { levelId, guess, sessionId });
+      return { error: 'Missing levelId or invalid guess format.' };
     }
-    
+    // --- End Modified Input Validation ---
+
     const supabase = useSupabase();
-    
-    // Fetch the level data
-    const { data: level, error } = await supabase
+
+    // --- Fetch Level Data ---
+    const { data: level, error: levelError } = await supabase
       .from('levels')
       .select('location, mapName')
-      .eq('id', id)
+      .eq('id', levelId)
       .single();
-    
-    if (error || !level) {
-      console.error("Error fetching level for guess:", error);
-      return { error: 'Level not found' };
+
+    if (levelError || !level) {
+      console.error(`Error fetching level ${levelId}:`, levelError);
+      return { error: 'Level not found or database error.' };
     }
-    
-    // Check if location data is valid
+
     const correctLocation = level.location;
     if (!correctLocation || typeof correctLocation.x !== 'number' || typeof correctLocation.y !== 'number') {
-      console.error("Fetched level has invalid location data:", correctLocation, "for ID:", id);
+      console.error(`Invalid location data for level ${levelId}:`, correctLocation);
       return { error: 'Internal error: Level location data is invalid.' };
     }
-    
-    // Calculate distance and score
-    const distance = Math.sqrt(
-      Math.pow(guess.x - correctLocation.x, 2) +
-      Math.pow(guess.y - correctLocation.y, 2)
-    );
-    
-    const perfectRadius = 3;
-    const maxDistance = 50;
-    
-    let score;
-    if (distance <= perfectRadius) {
-      score = 1000;
-    } else if (distance > maxDistance) {
-      score = 0;
-    } else {
-      const normalizedDistance = (distance - perfectRadius) / (maxDistance - perfectRadius);
-      score = Math.max(0, Math.floor(1000 * (1 - Math.pow(normalizedDistance, 2))));
-    }
-    
-    let sessionData = null;
-    
-    // If this is part of a game session, update the session data
+
+    // --- Calculate Score (Handles null guess) ---
+    const score = calculateScore(guess, correctLocation);
+
+    let sessionResponseData = null;
+
+    // --- Session Handling (if sessionId is provided) ---
     if (sessionId) {
-      // Get current session state
-      const { data: session, error: sessionError } = await supabase
+      const { data: session, error: sessionFetchError } = await supabase
         .from('game_sessions')
         .select('current_round, max_rounds, total_score, is_complete')
         .eq('id', sessionId)
         .single();
-      
-      if (sessionError || !session) {
-        console.error("Error fetching session:", sessionError);
-        return { error: 'Game session not found' };
+
+      if (sessionFetchError || !session) {
+        console.error(`Error fetching session ${sessionId} for guess:`, sessionFetchError);
+        return { error: 'Game session not found or invalid.' };
       }
-      
       if (session.is_complete) {
-        return { error: 'Game session is already complete' };
+        console.warn(`Attempted guess for already completed session ${sessionId}`);
+        return { error: 'Game session is already complete.' };
       }
-      
-      // Add the round to the session
-      const newRoundNumber = session.current_round + 1;
-      
-      // Insert the round data
-      const { error: roundError } = await supabase
+
+      const currentRound = session.current_round;
+      const maxRounds = session.max_rounds;
+      const newRoundNumber = currentRound + 1;
+
+      // Insert the new round data
+      const { error: roundInsertError } = await supabase
         .from('game_rounds')
         .insert({
           session_id: sessionId,
-          level_id: id, // Using the nanoid text field as is
+          level_id: levelId,
           round_number: newRoundNumber,
-          score: score,
-          guess: guess,
+          score: score, // Score will be 0 if guess was null
+          guess: guess, // Store null if timed out, or coordinates otherwise
           correct_location: correctLocation
         });
-      
-      if (roundError) {
-        console.error("Error adding round to session:", roundError);
-        return { error: 'Failed to save round data' };
+
+      if (roundInsertError) {
+        console.error(`Error inserting round ${newRoundNumber} for session ${sessionId}:`, roundInsertError);
+        return { error: 'Failed to save round data. Please try again.' };
       }
-      
-      // Update session data
+
+      // Update the session summary
       const newTotalScore = session.total_score + score;
-      const isLastRound = newRoundNumber >= session.max_rounds;
-      
-      const { data: updatedSession, error: updateError } = await supabase
+      const isNowComplete = maxRounds > 0 && newRoundNumber >= maxRounds;
+
+      const { data: updatedSession, error: sessionUpdateError } = await supabase
         .from('game_sessions')
         .update({
           current_round: newRoundNumber,
           total_score: newTotalScore,
-          is_complete: isLastRound,
-          updated_at: new Date()
+          is_complete: isNowComplete,
+          updated_at: new Date().toISOString()
         })
         .eq('id', sessionId)
-        .select('id, current_round, max_rounds, total_score, is_complete')
+        .select('current_round, max_rounds, total_score, is_complete')
         .single();
-      
-      if (updateError) {
-        console.error("Error updating session:", updateError);
-        return { error: 'Failed to update session' };
+
+      if (sessionUpdateError) {
+        console.error(`Error updating session ${sessionId} after round ${newRoundNumber}:`, sessionUpdateError);
+        return { error: 'Failed to update session summary.' };
       }
-      
-      sessionData = updatedSession;
-    }
-    
-    // Return the result
-    const result = {
-      score,
-      correctLocation,
-      mapName: level.mapName
-    };
-    
-    if (sessionData) {
-      result.sessionData = {
-        currentRound: sessionData.current_round,
-        maxRounds: sessionData.max_rounds,
-        totalScore: sessionData.total_score,
-        isComplete: sessionData.is_complete
+
+      sessionResponseData = {
+        currentRound: updatedSession.current_round,
+        maxRounds: updatedSession.max_rounds,
+        totalScore: updatedSession.total_score,
+        isComplete: updatedSession.is_complete
       };
     }
-    
-    return result;
+
+    // --- Prepare Final Response ---
+    const responsePayload = {
+      score,
+      correctLocation,
+      mapName: level.mapName,
+      ...(sessionResponseData && { sessionData: sessionResponseData })
+    };
+
+    return responsePayload;
+
   } catch (error) {
-    console.error('Guess processing failed:', error);
-    return { error: 'Failed to process guess' };
+    console.error('Unexpected error during guess processing:', error);
+    return { error: 'Internal server error processing guess.' };
   }
 });
