@@ -161,7 +161,7 @@
                   :disabled="game.disabled"
                 >
                   {{ game.name }}
-                  <span v-if="game.disabled" class="text-xs text-red-400/70 ml-1">(Soon™)</span>
+                  <span v-if="game.disabled" class="text-xs text-red-400/70 ml-1">Coming Soon</span>
                 </button>
               </div>
               <p class="text-xs text-gray-500 mt-1">
