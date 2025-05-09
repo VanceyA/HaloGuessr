@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     // Validate games array
     const games = Array.isArray(body.games) && body.games.length > 0
         ? body.games
-        : ['halo1', 'halo2']; // Default if invalid or empty
+        : ['halo1', 'halo2', 'halo3']; // Default if invalid or empty
 
     // Validate time limit
     const timeLimit = parseInt(body.timeLimit, 10);

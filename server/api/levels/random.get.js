@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
              return { error: 'No valid games selected for this session.' };
          }
       } else {
-          gameFilters = [gameIdToFullNameMap['halo1'], gameIdToFullNameMap['halo2']].filter(Boolean);
+          gameFilters = [gameIdToFullNameMap['halo1'], gameIdToFullNameMap['halo2'], gameIdToFullNameMap['halo3']].filter(Boolean);
       }
 
       // Get played levels

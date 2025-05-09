@@ -165,7 +165,7 @@
                 </button>
               </div>
               <p class="text-xs text-gray-500 mt-1">
-                Only Halo: CE and Halo 2 currently enabled.
+                Only Halo: CE, Halo 2, and Halo 3 are currently available.
               </p>
             </div>
 
@@ -262,7 +262,7 @@ const startError = ref(null);
 const availableGames = ref([
   { id: 'halo1', name: 'Halo: CE', disabled: false },
   { id: 'halo2', name: 'Halo 2', disabled: false },
-  { id: 'halo3', name: 'Halo 3', disabled: true },
+  { id: 'halo3', name: 'Halo 3', disabled: false },
   { id: 'halo3odst', name: 'Halo 3: ODST', disabled: true },
   { id: 'haloreach', name: 'Halo Reach', disabled: true },
   { id: 'halo4', name: 'Halo 4', disabled: true },
@@ -289,7 +289,7 @@ const presets = ref([
     id: 'quickplay',
     name: 'Quick Play',
     icon: ['fas', 'play'],
-    description: '5 rounds, random locations from Halo 1 & 2.',
+    description: '5 rounds, random locations from all available Halo games.',
     settings: {
       rounds: 5,
       games: [...enabledGameIds.value],
@@ -302,7 +302,7 @@ const presets = ref([
     id: 'endless',
     name: 'Endless',
     icon: ['fas', 'infinity'],
-    description: 'Unlimited rounds from Halo 1 & 2. Play as long as you can!',
+    description: 'Unlimited rounds from all available Halo games. Play as long as you can!',
     settings: {
       rounds: 5, // This value is ignored when unlimited is true
       games: [...enabledGameIds.value],
@@ -315,7 +315,7 @@ const presets = ref([
     id: 'trilogy',
     name: 'Trilogy',
     icon: ['fas', 'dice-three'],
-    description: 'Classic Halo 1 & 2 locations. (Halo 3 coming soon!)',
+    description: 'Classic trilogy locations from Halo: CE, 2, and 3.',
     settings: {
       rounds: 10,
       games: ['halo1', 'halo2'], // Explicitly define enabled games for this preset
