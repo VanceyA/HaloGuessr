@@ -6,11 +6,19 @@ export default defineEventHandler(async (event) => {
   try {
     const supabase = useSupabase(); // Get Supabase client
 
-    // *** Replace redis.keys + mget with Supabase select ***
-    // Fetch all levels from Supabase. Select all columns.
+    // *** Fetch all levels with map data from normalized structure ***
     const { data: levels, error } = await supabase
-      .from('levels') // Your table name
-      .select('*'); // Select all columns to return all level data
+      .from('levels')
+      .select(`
+        *,
+        maps (
+          id,
+          name,
+          image_path,
+          halo_game,
+          game_mode
+        )
+      `); // Select levels with joined map data
 
     if (error) {
       console.error('Supabase query failed:', error.message)

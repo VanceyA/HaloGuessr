@@ -17,28 +17,33 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody(event);
     // Basic validation for required fields and location format
-    if (!body.mapName || !body.levelName || !body.gameMode || !body.haloGame || !body.location || typeof body.location.x !== 'number' || typeof body.location.y !== 'number') {
+    if (!body.levelName || !body.mapId || !body.location || typeof body.location.x !== 'number' || typeof body.location.y !== 'number') {
          return { error: 'Missing or invalid required fields' };
      }
 
     const supabase = useSupabase(); // Get Supabase client
 
-    // Prepare data for update - only include fields that can be updated via this endpoint
-    const updatedData = {
-      mapName: body.mapName,
-      levelName: body.levelName,
-      gameMode: body.gameMode,
-      haloGame: body.haloGame.trim(),
-      location: body.location, // Stored as JSONB. Supabase handles updating JSONB fields.
-      // Do NOT include 'id', 'screenshotPath', 'mapPath' here as they shouldn't be changed by this endpoint.
-    };
+    // Verify the map exists
+    const { data: mapExists, error: mapError } = await supabase
+      .from('maps')
+      .select('id')
+      .eq('id', body.mapId)
+      .single();
 
-    // *** Replace redis.get + redis.set with Supabase update ***
+    if (mapError || !mapExists) {
+      return { error: 'Selected map not found' };
+    }
+
+    // Update the levels table with new map_id
     const { data, error } = await supabase
-      .from('levels') // Your table name
-      .update(updatedData) // Provide the data to update
-      .eq('id', id) // Filter by the level ID to update the specific row
-      .select(); // Optionally select the updated row to confirm (returns array)
+      .from('levels')
+      .update({
+        levelName: body.levelName,
+        map_id: body.mapId,
+        location: body.location
+      })
+      .eq('id', id)
+      .select();
 
     if (error) {
       console.error('Error updating level in Supabase:', error);

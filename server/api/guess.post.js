@@ -44,7 +44,12 @@ export default defineEventHandler(async (event) => {
     // --- Fetch Level Data ---
     const { data: level, error: levelError } = await supabase
       .from('levels')
-      .select('location, mapName')
+      .select(`
+        location,
+        maps (
+          name
+        )
+      `)
       .eq('id', levelId)
       .single();
 
@@ -135,7 +140,7 @@ export default defineEventHandler(async (event) => {
     const responsePayload = {
       score,
       correctLocation,
-      mapName: level.mapName,
+      mapName: level.maps.name,
       ...(sessionResponseData && { sessionData: sessionResponseData })
     };
 

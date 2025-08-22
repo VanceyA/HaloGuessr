@@ -1,45 +1,6 @@
 <template>
   <div class="min-h-screen bg-gradient-to-b from-halo-dark to-black text-gray-200 flex flex-col p-4 md:p-8">
-    <!-- Modern Header with Consistent Logo -->
-    <header class="mb-6 md:mb-8">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between">
-        <!-- Logo Section -->
-        <div class="flex items-center space-x-2">
-          <div class="flex items-center">
-            <!-- Halo-inspired shield icon -->
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="mr-3">
-              <path d="M24 6L8 12V24C8 32.8 14.4 41.2 24 44C33.6 41.2 40 32.8 40 24V12L24 6Z" fill="url(#paint0_linear)" />
-              <defs>
-                <linearGradient id="paint0_linear" x1="24" y1="6" x2="24" y2="44" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#7bf442" />
-                  <stop offset="1" stop-color="#52b2bf" />
-                </linearGradient>
-              </defs>
-            </svg>
-            
-            <div>
-              <h1 class="text-3xl font-light tracking-wider">
-                <span class="font-bold text-white">HALO</span>
-                <span class="text-blue-400 opacity-90">GUESSR</span>
-              </h1>
-              <div class="h-0.5 w-full bg-gradient-to-r from-halo-green to-blue-400 rounded"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="mt-3 md:mt-0 flex space-x-3">
-          <NuxtLink 
-            to="/admin/levels" 
-            class="text-sm text-gray-400 bg-halo-gray/50 py-1.5 px-4 rounded-full uppercase tracking-wider hover:bg-halo-gray/70 transition-colors"
-          >
-            Back to Levels
-          </NuxtLink>
-          <span class="text-sm text-gray-400 bg-halo-gray/50 py-1.5 px-4 rounded-full uppercase tracking-wider">
-            Edit Level
-          </span>
-        </div>
-      </div>
-    </header>
+    <AdminNav />
 
     <!-- Loading State -->
     <div v-if="loading" class="flex-grow flex items-center justify-center">
@@ -77,38 +38,11 @@
           <div>
             <label class="block text-blue-300 mb-2 font-medium">Map Image</label>
             <div class="rounded-lg overflow-hidden border border-blue-400/50 bg-halo-dark/50">
-              <img :src="level.mapPath" alt="Map" class="w-full h-auto" />
+              <img :src="level.maps?.image_path" alt="Map" class="w-full h-auto" />
             </div>
           </div>
         </div>
         
-        <!-- Game Mode Selector -->
-        <div class="mb-6">
-          <label class="block text-blue-300 mb-2 font-medium">Game Mode</label>
-          <div class="flex bg-halo-dark/70 rounded-lg p-1 border border-blue-400/50">
-            <button 
-              v-for="mode in ['Multiplayer', 'Campaign', 'Firefight']" 
-              :key="mode"
-              @click="level.gameMode = mode"
-              class="flex-1 py-2 text-center rounded-md transition-all duration-200"
-              :class="level.gameMode === mode ? 'bg-halo-blue text-halo-green font-medium' : 'text-gray-400 hover:bg-halo-blue/20'"
-            >
-              {{ mode }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Halo Game Selector -->
-        <div class="mb-6">
-          <label class="block text-blue-300 mb-2 font-medium">Halo Game</label>
-          <select 
-            v-model="level.haloGame" 
-            class="w-full px-4 py-3 bg-halo-dark/70 border border-blue-400/50 focus:border-halo-green rounded-lg outline-none focus:ring-1 focus:ring-halo-green text-white appearance-none"
-          >
-            <option value="" disabled>Select Halo Game</option>
-            <option v-for="game in haloGames" :key="game" :value="game">{{ game }}</option>
-          </select>
-        </div>
         
         <!-- Level Name Input -->
         <div class="mb-6">
@@ -121,22 +55,57 @@
           />
         </div>
 
-        <!-- Map Name Input -->
+        <!-- Map Selector -->
         <div class="mb-6">
-          <label class="block text-blue-300 mb-2 font-medium">Map Name</label>
-          <input 
-            v-model="level.mapName" 
-            type="text" 
-            placeholder="e.g., Blood Gulch" 
-            class="w-full px-4 py-3 bg-halo-dark/70 border border-blue-400/50 focus:border-halo-green rounded-lg outline-none focus:ring-1 focus:ring-halo-green text-white"
-          />
+          <label class="block text-blue-300 mb-2 font-medium">Select Map</label>
+          <div class="relative">
+            <select 
+              v-model="level.map_id" 
+              @change="onMapChange"
+              class="w-full px-4 py-3 bg-halo-dark/70 border border-blue-400/50 focus:border-halo-green rounded-lg outline-none focus:ring-1 focus:ring-halo-green text-white appearance-none"
+              :disabled="loadingMaps"
+            >
+              <option value="" disabled>{{ loadingMaps ? 'Loading maps...' : 'Select a map' }}</option>
+              <optgroup v-for="game in groupedMaps" :key="game.halo_game" :label="game.halo_game">
+                <option 
+                  v-for="map in game.maps" 
+                  :key="map.id" 
+                  :value="map.id"
+                >
+                  {{ map.name }} ({{ map.game_mode }})
+                </option>
+              </optgroup>
+            </select>
+            <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+              <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Map Info Display -->
+        <div class="mb-6">
+          <label class="block text-blue-300 mb-2 font-medium">Current Map</label>
+          <div class="bg-halo-dark/50 border border-blue-400/30 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-white font-medium">{{ level.maps?.name || 'No map selected' }}</h3>
+                <p class="text-sm text-blue-300">{{ level.maps?.halo_game }}</p>
+                <p class="text-sm text-gray-400">{{ level.maps?.game_mode }}</p>
+              </div>
+              <div class="text-sm text-gray-400">
+                Map properties are managed in the Maps section
+              </div>
+            </div>
+          </div>
         </div>
         
         <!-- Map Location -->
         <div class="mb-6">
           <label class="block text-blue-300 mb-2 font-medium">Location on Map</label>
           <div class="rounded-lg overflow-hidden border border-blue-400/50">
-            <MapCanvas :map-path="level.mapPath" :is-upload="true" :initial-marker="level.location" @guess="setCoordinates" />
+            <MapCanvas :map-path="level.maps?.image_path" :is-upload="true" :initial-marker="level.location" @guess="setCoordinates" />
           </div>
           <p v-if="level.location" class="mt-2 text-blue-300">
             Selected: X: <span class="text-halo-green">{{ level.location.x.toFixed(0) }}%</span>, 
@@ -247,18 +216,25 @@ const id = route.params.id
 const level = ref({
   id: '',
   screenshotPath: '',
-  mapPath: '',
-  mapName: '',
   levelName: '',
-  gameMode: '',
-  haloGame: '',
-  location: { x: 0, y: 0 }
+  location: { x: 0, y: 0 },
+  map_id: '',
+  maps: {
+    id: '',
+    name: '',
+    image_path: '',
+    halo_game: '',
+    game_mode: '',
+    description: ''
+  }
 })
 
 const loading = ref(true)
 const error = ref(null)
 const isUpdating = ref(false)
 const updateStatus = ref('')
+const availableMaps = ref([])
+const loadingMaps = ref(false)
 
 // Delete related refs
 const showDeleteConfirm = ref(false)
@@ -266,23 +242,59 @@ const deletePassword = ref('')
 const isDeleting = ref(false)
 const deleteError = ref('')
 
-const haloGames = [
-  'Halo: Combat Evolved',
-  'Halo 2',
-  'Halo 3',
-  'Halo 3: ODST',
-  'Halo: Reach',
-  'Halo 4',
-  'Halo 5: Guardians',
-  'Halo Infinite'
-]
 
 const setCoordinates = (coords) => {
   level.value.location = coords
 }
 
+// Computed property to group maps by Halo game
+const groupedMaps = computed(() => {
+  const groups = {}
+  availableMaps.value.forEach(map => {
+    if (!groups[map.halo_game]) {
+      groups[map.halo_game] = {
+        halo_game: map.halo_game,
+        maps: []
+      }
+    }
+    groups[map.halo_game].maps.push(map)
+  })
+  return Object.values(groups)
+})
+
+const onMapChange = () => {
+  // Find the selected map and update the maps object
+  const selectedMap = availableMaps.value.find(map => map.id === level.value.map_id)
+  if (selectedMap) {
+    level.value.maps = {
+      id: selectedMap.id,
+      name: selectedMap.name,
+      image_path: selectedMap.image_path,
+      halo_game: selectedMap.halo_game,
+      game_mode: selectedMap.game_mode,
+      description: selectedMap.description || ''
+    }
+  }
+}
+
+const fetchAvailableMaps = async () => {
+  loadingMaps.value = true
+  try {
+    const response = await $fetch('/api/admin/maps/list')
+    if (response.error) {
+      console.error('Error fetching maps:', response.error)
+    } else {
+      availableMaps.value = response.maps || []
+    }
+  } catch (err) {
+    console.error('Failed to fetch maps:', err)
+  } finally {
+    loadingMaps.value = false
+  }
+}
+
 const updateLevel = async () => {
-  if (!level.value.levelName || !level.value.mapName || !level.value.haloGame) {
+  if (!level.value.levelName || !level.value.map_id) {
     updateStatus.value = 'Please fill all required fields'
     return
   }
@@ -294,10 +306,8 @@ const updateLevel = async () => {
     const response = await $fetch(`/api/admin/levels/${id}`, {
       method: 'PUT',
       body: {
-        mapName: level.value.mapName,
         levelName: level.value.levelName,
-        gameMode: level.value.gameMode,
-        haloGame: level.value.haloGame,
+        mapId: level.value.map_id,
         location: level.value.location
       }
     })
@@ -348,12 +358,17 @@ const deleteLevel = async () => {
 }
 
 onMounted(async () => {
+  // Fetch available maps first
+  await fetchAvailableMaps()
+  
   try {
     const response = await $fetch(`/api/admin/levels/${id}`)
     if (response.error) {
       error.value = response.error
     } else {
       level.value = response
+      // Set the map_id from the response
+      level.value.map_id = response.maps?.id || ''
     }
   } catch (err) {
     console.error(err)

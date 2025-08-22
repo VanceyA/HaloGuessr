@@ -1,45 +1,6 @@
 <template>
   <div class="min-h-screen bg-gradient-to-b from-halo-dark to-black text-gray-200 flex flex-col p-4 md:p-8">
-    <!-- Modern Header with Consistent Logo -->
-    <header class="mb-6 md:mb-8">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between">
-        <!-- Logo Section -->
-        <div class="flex items-center space-x-2">
-          <div class="flex items-center">
-            <!-- Halo-inspired shield icon -->
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="mr-3">
-              <path d="M24 6L8 12V24C8 32.8 14.4 41.2 24 44C33.6 41.2 40 32.8 40 24V12L24 6Z" fill="url(#paint0_linear)" />
-              <defs>
-                <linearGradient id="paint0_linear" x1="24" y1="6" x2="24" y2="44" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#7bf442" />
-                  <stop offset="1" stop-color="#52b2bf" />
-                </linearGradient>
-              </defs>
-            </svg>
-            
-            <div>
-              <h1 class="text-3xl font-light tracking-wider">
-                <span class="font-bold text-white">HALO</span>
-                <span class="text-blue-400 opacity-90">GUESSR</span>
-              </h1>
-              <div class="h-0.5 w-full bg-gradient-to-r from-halo-green to-blue-400 rounded"></div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="mt-3 md:mt-0 flex space-x-3">
-          <span class="text-sm text-gray-400 bg-halo-gray/50 py-1.5 px-4 rounded-full uppercase tracking-wider">
-            Admin: Manage Levels
-          </span>
-          <button 
-            @click="logout" 
-            class="text-sm text-red-400 bg-halo-gray/50 py-1.5 px-4 rounded-full uppercase tracking-wider hover:bg-halo-gray/70 transition-colors"
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    </header>
+    <AdminNav />
 
     <div class="w-full max-w-6xl mx-auto bg-halo-gray/30 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden">
       <div class="p-6 md:p-8">
@@ -207,21 +168,21 @@
                   {{ level.levelName }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  {{ level.mapName }}
+                  {{ level.maps?.name }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  {{ level.haloGame }}
+                  {{ level.maps?.halo_game }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span 
                     class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
                     :class="{
-                      'bg-green-900/50 text-green-300': level.gameMode === 'Multiplayer',
-                      'bg-blue-900/50 text-blue-300': level.gameMode === 'Campaign',
-                      'bg-orange-900/50 text-orange-300': level.gameMode === 'Firefight',
+                      'bg-green-900/50 text-green-300': level.maps?.game_mode === 'Multiplayer',
+                      'bg-blue-900/50 text-blue-300': level.maps?.game_mode === 'Campaign',
+                      'bg-orange-900/50 text-orange-300': level.maps?.game_mode === 'Firefight',
                     }"
                   >
-                    {{ level.gameMode }}
+                    {{ level.maps?.game_mode }}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -274,17 +235,17 @@ const logout = async () => {
 
 // Extract unique values for filters
 const uniqueMaps = computed(() => {
-  const maps = [...new Set(levels.value.map(level => level.mapName).filter(Boolean))]
+  const maps = [...new Set(levels.value.map(level => level.maps?.name).filter(Boolean))]
   return maps.sort()
 })
 
 const uniqueGames = computed(() => {
-  const games = [...new Set(levels.value.map(level => level.haloGame).filter(Boolean))]
+  const games = [...new Set(levels.value.map(level => level.maps?.halo_game).filter(Boolean))]
   return games.sort()
 })
 
 const uniqueModes = computed(() => {
-  const modes = [...new Set(levels.value.map(level => level.gameMode).filter(Boolean))]
+  const modes = [...new Set(levels.value.map(level => level.maps?.game_mode).filter(Boolean))]
   return modes.sort()
 })
 
@@ -297,16 +258,15 @@ const isFiltered = computed(() => {
 // Filter levels based on search and filters
 const filteredLevels = computed(() => {
   return levels.value.filter(level => {
-    // Search across all fields
+    // Search across all fields including nested maps data
     const searchMatches = !searchQuery.value || 
-      Object.values(level).some(value => 
-        value && value.toString().toLowerCase().includes(searchQuery.value.toLowerCase())
-      )
+      [level.id, level.levelName, level.maps?.name, level.maps?.halo_game, level.maps?.game_mode]
+        .some(value => value && value.toString().toLowerCase().includes(searchQuery.value.toLowerCase()))
     
     // Apply filters
-    const mapMatches = !selectedMap.value || level.mapName === selectedMap.value
-    const gameMatches = !selectedGame.value || level.haloGame === selectedGame.value
-    const modeMatches = !selectedMode.value || level.gameMode === selectedMode.value
+    const mapMatches = !selectedMap.value || level.maps?.name === selectedMap.value
+    const gameMatches = !selectedGame.value || level.maps?.halo_game === selectedGame.value
+    const modeMatches = !selectedMode.value || level.maps?.game_mode === selectedMode.value
     
     return searchMatches && mapMatches && gameMatches && modeMatches
   })
@@ -329,8 +289,8 @@ onMounted(async () => {
     
     // Check if response is an array (success) or has error property
     if (Array.isArray(response)) {
-      // Sort by level name 
-      levels.value = response.sort((a, b) => a.mapName?.localeCompare(b.mapName) || 0)
+      // Sort by map name from the nested maps object
+      levels.value = response.sort((a, b) => a.maps?.name?.localeCompare(b.maps?.name) || 0)
       console.log('Levels loaded:', levels.value.length)
     } else if (response.error) {
       error.value = response.details 

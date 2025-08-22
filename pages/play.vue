@@ -121,7 +121,7 @@
             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
               <p class="text-white font-medium">
                 <span class="text-gray-400 uppercase text-xs tracking-wide mr-2">LOCATION:</span>
-                {{ screenshot.mapName }}
+                {{ screenshot.maps?.name }}
               </p>
             </div>
           </div>
@@ -244,7 +244,7 @@
               </div>
               <MapCanvas
                 v-if="screenshot"
-                :map-path="screenshot.mapPath"
+                :map-path="screenshot.maps?.image_path"
                 :correct-location="result?.correctLocation"
                 :disabled="hasGuessed"
                 @map-loaded="onMapLoaded"
@@ -392,10 +392,11 @@ watch(imagesLoaded, (newValue) => {
     if (newValue && roundTimeLimit.value > 0 && !hasGuessed.value && !sessionComplete.value) {
         startRoundTimer();
     }
-    // Hide loading overlay *only* when images are loaded
+    // Hide loading overlays *only* when images are loaded
     // This handles the case where one image loads much faster than the other.
     if (newValue) {
         isLoadingNextLevel.value = false;
+        isLoadingInitial.value = false;
     }
 });
 
@@ -558,11 +559,8 @@ async function fetchScreenshot(sessionId = null) {
     isLoadingNextLevel.value = false;
     router.push('/');
   } finally {
-     // Don't set loading flags to false here. Let the image load callbacks handle it.
-     // Only set initial loading false if it hasn't been set yet (e.g., on first load error)
-     if (isLoadingInitial.value) {
-         isLoadingInitial.value = false;
-     }
+     // Don't set isLoadingInitial to false here - let the image loading watcher handle it
+     // This ensures content doesn't become invisible while images are still loading
   }
 }
 

@@ -21,38 +21,39 @@ export default defineEventHandler(async (event) => {
     }
 
     let levelName = '';
-    let gameMode = '';
-    let haloGame = '';
-    let mapName = '';
+    let mapId = '';
     let x = '';
     let y = '';
     let screenshotFile = null;
-    let mapFile = null;
 
-    // Parse form data (keep as is)
+    // Parse form data
     for (const field of formData) {
       if (field.name === 'levelName') levelName = field.data.toString();
-      if (field.name === 'gameMode') gameMode = field.data.toString();
-      if (field.name === 'haloGame') haloGame = field.data.toString();
-      if (field.name === 'mapName') mapName = field.data.toString().trim();
+      if (field.name === 'mapId') mapId = field.data.toString();
       if (field.name === 'x') x = field.data.toString();
       if (field.name === 'y') y = field.data.toString();
       if (field.name === 'screenshot') screenshotFile = field;
-      if (field.name === 'mapImage') mapFile = field;
     }
 
-    if (!levelName || !x || !y || !screenshotFile || !mapFile || !gameMode || !haloGame || !mapName) {
+    if (!levelName || !x || !y || !screenshotFile || !mapId) {
       return { error: 'Missing required fields' };
+    }
+
+    // Verify the map exists
+    const { data: mapExists, error: mapError } = await supabase
+      .from('maps')
+      .select('id')
+      .eq('id', mapId)
+      .single();
+
+    if (mapError || !mapExists) {
+      return { error: 'Selected map not found' };
     }
 
     const id = nanoid(); // Continue generating nanoid for consistency
 
-    // Vercel Blob Uploads (Keep as is)
+    // Upload screenshot to blob storage
     const screenshotBlob = await put(`screenshots/${id}_${screenshotFile.filename}`, screenshotFile.data, {
-      access: 'public',
-      token: config.blobReadWriteToken
-    });
-    const mapBlob = await put(`maps/${id}_${mapFile.filename}`, mapFile.data, {
       access: 'public',
       token: config.blobReadWriteToken
     });
@@ -60,11 +61,8 @@ export default defineEventHandler(async (event) => {
     const metadata = {
       id, // Use the generated nanoid as the primary key
       screenshotPath: screenshotBlob.url,
-      mapPath: mapBlob.url,
-      mapName,
       levelName,
-      gameMode,
-      haloGame,
+      map_id: mapId,
       location: { x: parseFloat(x), y: parseFloat(y) } // Stored as JSONB
     };
 

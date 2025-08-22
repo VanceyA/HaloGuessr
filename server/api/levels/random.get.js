@@ -86,9 +86,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // --- Level Fetching ---
-    let levelsQuery = supabase.from('levels').select('id');
+    let levelsQuery = supabase
+      .from('levels')
+      .select('id, maps!inner(halo_game)');
     if (gameFilters && gameFilters.length > 0) {
-      levelsQuery = levelsQuery.in('haloGame', gameFilters);
+      levelsQuery = levelsQuery.in('maps.halo_game', gameFilters);
     }
     const { data: allLevelIds, error: fetchIdsError } = await levelsQuery;
     if (fetchIdsError) { return { error: `Database error: ${fetchIdsError.message}` }; }
@@ -118,7 +120,15 @@ export default defineEventHandler(async (event) => {
     // --- Fetch Full Level Data ---
     const { data: level, error: fetchLevelError } = await supabase
       .from('levels')
-      .select('id, screenshotPath, mapPath, mapName, location')
+      .select(`
+        id, 
+        screenshotPath, 
+        location,
+        maps (
+          name,
+          image_path
+        )
+      `)
       .eq('id', randomLevelId)
       .single();
     if (fetchLevelError || !level) { return { error: 'Failed to retrieve level data.' }; }
@@ -127,9 +137,14 @@ export default defineEventHandler(async (event) => {
     const response = {
       id: level.id,
       screenshotPath: level.screenshotPath,
-      mapPath: level.mapPath,
-      mapName: level.mapName,
       location: level.location,
+      maps: {
+        name: level.maps.name,
+        image_path: level.maps.image_path
+      },
+      // Keep legacy fields for backward compatibility
+      mapPath: level.maps.image_path,
+      mapName: level.maps.name,
     };
 
     // Add session data if applicable
