@@ -3,7 +3,11 @@
 @tailwind utilities;
 
 @layer base {
-  html, body {
-    background-color: #0a1929;
+  html {
+    background-color: #000;
+  }
+  body {
+    background: linear-gradient(to bottom, #0a1929, #000);
+    min-height: 100vh;
   }
 }
