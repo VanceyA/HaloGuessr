@@ -9,6 +9,7 @@ export default defineNuxtConfig({
     }
   },
   modules: [
+    '@vercel/analytics',
     '@nuxtjs/tailwindcss',
     ['@vesp/nuxt-fontawesome', {
       icons: [
