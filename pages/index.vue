@@ -57,7 +57,7 @@
               v-if="previewScreenshot"
               :src="previewScreenshot.screenshotPath"
               class="pp-feed-img"
-              alt="Halo preview"
+              alt="HaloGuessr gameplay — a Halo screenshot with a map overlay for pinpointing your location"
             />
             <template v-else>
               <div class="pp-stripes"></div>
@@ -233,6 +233,43 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+
+useSeoMeta({
+  title: 'Pinpoint Your Location in the Halo Universe',
+  description: 'Drop into random Halo locations and mark exactly where you are. Play across Halo: CE, Halo 2, Halo 3, and more in this fan-made geography guessing game.',
+  ogTitle: 'HaloGuessr – Pinpoint Your Location in the Halo Universe',
+  ogDescription: 'Drop into random Halo locations and mark exactly where you are. Play across Halo: CE, Halo 2, Halo 3, and more in this fan-made geography guessing game.',
+  ogType: 'website',
+  ogUrl: 'https://haloguessr.com',
+  ogSiteName: 'HaloGuessr',
+  ogImage: 'https://haloguessr.com/og-image.png',
+  twitterCard: 'summary_large_image',
+  twitterTitle: 'HaloGuessr – Pinpoint Your Location in the Halo Universe',
+  twitterDescription: 'Drop into random Halo locations and mark exactly where you are. Fan-made geography guessing game.',
+  twitterImage: 'https://haloguessr.com/og-image.png',
+  robots: 'index, follow',
+});
+
+useHead({
+  link: [{ rel: 'canonical', href: 'https://haloguessr.com' }],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebApplication',
+        name: 'HaloGuessr',
+        url: 'https://haloguessr.com',
+        description: 'A fan-made geography guessing game set in the Halo universe. Drop into random locations and pinpoint exactly where you are.',
+        applicationCategory: 'GameApplication',
+        genre: 'Quiz Game',
+        operatingSystem: 'Web',
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+        about: { '@type': 'VideoGameSeries', name: 'Halo' },
+      }),
+    },
+  ],
+});
 
 const router = useRouter();
 const isStarting = ref(false);

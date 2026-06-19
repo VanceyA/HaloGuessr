@@ -215,6 +215,9 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import MapCanvas from '~/components/MapCanvas.vue';
 
+useSeoMeta({ robots: 'noindex, nofollow' });
+useHead({ title: 'Playing' });
+
 const route = useRoute();
 const router = useRouter();
 
