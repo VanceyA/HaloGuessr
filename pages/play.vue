@@ -1,321 +1,216 @@
-<!-- pages/play.vue -->
 <template>
-  <div
-    class="min-h-screen bg-gradient-to-b from-halo-dark to-black text-gray-200
-           flex flex-col p-4 md:p-8 relative"
-  >
-    <!-- Header -->
-    <header class="mb-6 md:mb-8 flex items-center justify-between">
-      <div class="flex items-center">
-        <!-- Logo Section -->
-        <div class="flex items-center space-x-2">
-          <svg
-            width="48"
-            height="48"
-            viewBox="0 0 48 48"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            class="mr-3"
-          >
-            <path
-              d="M24 6L8 12V24C8 32.8 14.4 41.2 24 44C33.6 41.2 40 32.8 40 24V12L24 6Z"
-              fill="url(#paint0_linear)"
-            />
-            <defs>
-              <linearGradient
-                id="paint0_linear"
-                x1="24"
-                y1="6"
-                x2="24"
-                y2="44"
-                gradientUnits="userSpaceOnUse"
-              >
-                <stop stop-color="#7bf442" />
-                <stop offset="1" stop-color="#52b2bf" />
-              </linearGradient>
-            </defs>
+  <div class="play-root" :data-state="gameState">
+    <!-- CRT scanlines -->
+    <div class="scanlines" aria-hidden="true"></div>
+
+    <!-- Full-bleed recon feed -->
+    <div class="feed">
+      <img
+        v-if="screenshot"
+        :src="screenshot.screenshotPath"
+        class="feed-img"
+        alt=""
+        @load="onScreenshotLoaded"
+      />
+      <div class="feed-stripes"></div>
+      <div class="feed-grid"></div>
+      <div class="feed-vig"></div>
+      <div v-if="!screenshotLoaded" class="feed-ph">
+        <div class="t">
+          {{ isLoadingInitial ? '[ Establishing recon feed ]' : '[ Loading drop zone ]' }}
+          <small>{{ isLoadingInitial ? 'connecting to satellite...' : 'please wait' }}</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top HUD bar -->
+    <div v-if="!isLoadingInitial" class="topbar">
+      <div class="chip chip-brand brk">
+        <svg class="mark" viewBox="0 0 36 40" fill="none">
+          <path d="M18 1.5 34.5 8.5v12.5C34.5 31 27.2 37 18 38.5 8.8 37 1.5 31 1.5 21V8.5L18 1.5Z" stroke="#4fe08a" stroke-width="1.6" fill="rgba(79,224,138,0.06)"/>
+          <circle cx="18" cy="20" r="8" stroke="#6dffa4" stroke-width="1.6"/>
+          <circle cx="18" cy="20" r="2.4" fill="#6dffa4"/>
+        </svg>
+        <div class="lt"><b>HALO</b>GUESSR</div>
+      </div>
+
+      <div class="chip chip-round">
+        <div class="round-lbl">
+          Round&nbsp;<b>{{ sessionData.currentRound }}<template v-if="sessionData.maxRounds > 0">/{{ sessionData.maxRounds }}</template></b>
+        </div>
+        <div v-if="sessionData.maxRounds > 0" class="pips">
+          <div
+            v-for="i in sessionData.maxRounds"
+            :key="i"
+            class="pip"
+            :class="pipClass(i)"
+          ></div>
+        </div>
+      </div>
+
+      <div class="chip chip-score">
+        <svg class="star" width="14" height="14" viewBox="0 0 14 14">
+          <path d="M7 0l1.8 4.3L13.5 5l-3.5 3 1.1 4.6L7 10.2 2.9 12.6 4 8 .5 5l4.7-.7L7 0z" fill="currentColor"/>
+        </svg>
+        <span class="l">Score</span>
+        <span class="v">{{ totalScore.toLocaleString() }}</span>
+      </div>
+
+      <div
+        v-if="roundTimeLimit > 0 && gameState === 'active'"
+        class="chip chip-timer"
+        :class="{ low: timeLeft <= 10 }"
+      >
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.4">
+          <circle cx="6.5" cy="7" r="5.2"/>
+          <path d="M6.5 4v3l2 1.4M4.6 1h3.8"/>
+        </svg>
+        <span class="t">{{ formattedTimeLeft }}</span>
+      </div>
+
+      <button class="exit-btn" @click="exitSession">✕ Exit</button>
+    </div>
+
+    <!-- Game label bottom-left -->
+    <div v-if="screenshot && !isLoadingInitial" class="gamelbl" :class="{ 'sheet-hidden': sheetFull }">
+      <span class="ic">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="7.5" cy="7.5" r="6"/>
+          <circle cx="7.5" cy="7.5" r="1.6" fill="currentColor" stroke="none"/>
+          <path d="M7.5 1.5v2M7.5 11.5v2M1.5 7.5h2M11.5 7.5h2"/>
+        </svg>
+      </span>
+      <div>
+        <div class="k">Drop {{ String(sessionData.currentRound).padStart(2, '0') }}</div>
+        <div class="v">{{ screenshot.maps?.name }}</div>
+      </div>
+    </div>
+
+    <!-- Mobile scrim (behind bottom sheet) -->
+    <div class="mob-scrim" :class="{ visible: sheetFull }" @click="sheetFull = false"></div>
+
+    <!-- Map dock — always mounted when screenshot is available so MapCanvas can load -->
+    <div
+      v-if="screenshot"
+      class="mapdock brk"
+      :class="{
+        'is-loading': dockIsLoading,
+        'open': gameState === 'result',
+        'sheet-full': sheetFull
+      }"
+    >
+      <div class="handle-zone" @click="toggleSheet" @touchstart.passive="onHandleTouchStart" @touchend="onHandleTouchEnd">
+        <div class="handle"></div>
+      </div>
+      <div class="mapdock-head">
+        <h2>{{ gameState === 'result' ? 'Result' : 'Select Location' }}</h2>
+        <span class="exp">hover to expand</span>
+      </div>
+
+      <div class="map-wrap">
+        <!-- Processing overlay -->
+        <div v-if="hasGuessed && !result && !showTimeoutOverlay" class="map-overlay">
+          <div class="proc-ring"></div>
+          <span class="proc-lbl">Processing</span>
+        </div>
+        <!-- Timeout overlay -->
+        <div v-if="showTimeoutOverlay" class="map-overlay timeout-overlay">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="14" cy="15" r="11"/>
+            <path d="M14 9v6l3 2M10 2h8"/>
           </svg>
-          <div>
-            <h1 class="text-3xl font-light tracking-wider">
-              <span class="font-bold text-white">HALO</span>
-              <span class="text-blue-400 opacity-90">GUESSR</span>
-            </h1>
-            <div class="h-0.5 w-full bg-gradient-to-r from-halo-green to-blue-400 rounded"></div>
-          </div>
+          <span>TIME'S UP</span>
         </div>
+        <MapCanvas
+          :map-path="screenshot.maps?.image_path"
+          :correct-location="result?.correctLocation"
+          :disabled="hasGuessed"
+          @map-loaded="onMapLoaded"
+          @select="onSelect"
+        />
       </div>
-      <div class="flex items-center space-x-4">
-          <!-- Timer Display -->
-          <div v-if="roundTimeLimit > 0 && screenshot && !result && !sessionComplete && !isLoadingNextLevel && !isLoadingInitial"
-               class="font-mono text-xl px-3 py-1 rounded bg-black/30 border border-halo-blue/20"
-               :class="timeLeft <= 10 && timeLeft > 0 ? 'text-red-400 animate-pulse border-red-500/50' : 'text-blue-300'">
-              <font-awesome-icon :icon="['far', 'clock']" class="mr-2 opacity-70" />
-              {{ formattedTimeLeft }}
-          </div>
-          <!-- End Timer Display -->
 
-          <a
-            v-if="!activeSession"
-            href="https://ko-fi.com/haloguessr"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="bg-halo-green hover:bg-lime-500 text-black font-bold py-2 px-4 rounded-full shadow-md transition-colors duration-300 z-50"
-          >
-            Donate <font-awesome-icon class="ml-2" :icon="['fas', 'donate']" />
-          </a>
-          <button
-            v-else-if="!result && !sessionComplete"
-            @click="exitSession"
-            class="text-gray-400 hover:text-white flex items-center"
-          >
-            <font-awesome-icon :icon="['fas', 'times']" class="mr-2" />
-            Exit Game
+      <div class="mapdock-foot">
+        <!-- Confirm button (guessing phase) -->
+        <button
+          v-if="gameState === 'active'"
+          class="confirm"
+          :disabled="!pendingGuess || hasGuessed"
+          @click="confirmGuess"
+        >
+          <template v-if="hasGuessed">◉ Analyzing…</template>
+          <template v-else-if="pendingGuess">◎ Confirm Location</template>
+          <template v-else>◎ Drop a marker first</template>
+        </button>
+
+        <!-- Result bar -->
+        <div v-if="gameState === 'result'" class="resultbar">
+          <div class="res-row">
+            <div class="res-pts">
+              <div class="n">{{ result.score.toLocaleString() }}</div>
+              <div class="u">Points</div>
+            </div>
+            <div class="res-mid">
+              <div class="k">Actual</div>
+              <div class="nm">{{ result.mapName }}</div>
+            </div>
+            <div class="res-dist">
+              <div class="n">{{ accuracy.toFixed(0) }}%</div>
+              <div class="u">accuracy</div>
+            </div>
+          </div>
+          <div class="res-meter"><i :style="{ width: accuracy.toFixed(0) + '%' }"></i></div>
+          <button class="next" @click="nextScreenshot">
+            {{ isLastRound ? 'View Debrief ▶' : 'Next Round ▶' }}
           </button>
-      </div>
-    </header>
-
-    <!-- Session Progress UI -->
-    <div v-if="activeSession && screenshot && !sessionComplete" class="w-full max-w-7xl mx-auto mb-4">
-      <div class="bg-halo-gray/30 backdrop-blur-sm rounded-lg p-3 flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-          <div class="px-3 py-1 rounded bg-halo-blue/20 text-blue-300 text-sm font-mono">
-            <span v-if="sessionData.maxRounds > 0">
-              Round {{ sessionData.currentRound }}/{{ sessionData.maxRounds }}
-            </span>
-            <span v-else>
-              Round {{ sessionData.currentRound }} (Endless)
-            </span>
-          </div>
-          <div class="flex items-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-4 w-4 text-halo-green mr-2"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            <span class="text-gray-400 text-sm mr-1">Total Score:</span>
-            <span class="font-mono font-bold text-halo-green">{{ sessionData.totalScore }}</span>
-          </div>
         </div>
       </div>
     </div>
 
-    <!-- Main Game Content -->
-    <div
-      v-if="screenshot && !sessionComplete"
-      class="w-full max-w-7xl mx-auto flex-grow"
-      :class="{ 'opacity-0': !imagesLoaded && !isLoadingInitial }"
-    >
-      <div class="grid md:grid-cols-5 gap-6 h-full">
-        <!-- Screenshot Container -->
-        <div class="md:col-span-3 bg-halo-gray/20 backdrop-blur-sm rounded-lg overflow-hidden shadow-lg">
-          <div class="relative h-72 md:h-[450px]">
-            <img
-              :src="screenshot.screenshotPath"
-              alt="Halo Screenshot"
-              class="w-full h-full object-cover"
-              @load="onScreenshotLoaded"
-            />
-            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-              <p class="text-white font-medium">
-                <span class="text-gray-400 uppercase text-xs tracking-wide mr-2">LOCATION:</span>
-                {{ screenshot.maps?.name }}
-              </p>
+    <!-- Between-rounds loading overlay -->
+    <div v-if="isLoadingNextLevel && !isLoadingInitial" class="round-loader">
+      <div class="rl-ring"></div>
+      <div class="rl-t">Loading Next Location</div>
+      <div class="rl-bar"><div class="rl-fill"></div></div>
+    </div>
+
+    <!-- Summary overlay -->
+    <Transition name="fade">
+      <div v-if="gameState === 'summary'" class="summary">
+        <div class="sum-card brk">
+          <div class="sum-kick">Recon Debrief · {{ activeSession ? 'Ranked Play' : 'Quick Play' }}</div>
+          <h2>Mission Complete</h2>
+          <div class="sum-rank">RANK · {{ rank }}</div>
+          <div class="sum-total">
+            <span class="n">{{ summaryDisplayScore.toLocaleString() }}</span>
+            <span class="max">/ {{ sessionData.maxRounds * 1000 }}</span>
+            <span class="u">Total<br/>Points</span>
+          </div>
+          <div class="sum-list">
+            <div v-for="round in sessionRounds" :key="round.round_number" class="sum-r">
+              <span class="i">R{{ round.round_number }}</span>
+              <span class="nm">{{ round.mapName || `Round ${round.round_number}` }}</span>
+              <span class="p">{{ round.score.toLocaleString() }}</span>
             </div>
           </div>
-        </div>
-
-        <!-- Map & Guess Container -->
-        <div class="md:col-span-2 flex flex-col">
-          <!-- Score Display (Quick Play only) -->
-          <div v-if="!activeSession" class="bg-halo-gray/30 backdrop-blur-sm rounded-t-lg p-2 border-b border-halo-blue/30 flex items-center justify-between">
-            <div class="flex items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4 text-halo-green mr-2"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              <div class="text-gray-400 uppercase text-xs tracking-wider">
-                Round {{ sessionData.currentRound }}/{{ sessionData.maxRounds }} Score
-              </div>
-            </div>
-            <div class="text-lg font-mono font-bold text-halo-green">{{ score }}</div>
-          </div>
-
-          <div class="bg-halo-gray/20 backdrop-blur-sm rounded-b-lg overflow-hidden shadow-lg flex flex-col h-full relative">
-            <!-- Map Header -->
-            <div class="p-3 border-b border-halo-blue/20 flex justify-between items-center">
-              <p class="text-blue-300 text-sm uppercase tracking-wider">
-                {{ !hasGuessed
-                  ? 'Select location'
-                  : result
-                  ? 'Result'
-                  : 'Processing...' }}
-              </p>
-              <div class="flex items-center space-x-3">
-                <!-- Confirm Guess Button -->
-                <button
-                  v-if="pendingGuess && !hasGuessed"
-                  @click="confirmGuess"
-                  class="bg-halo-blue hover:bg-blue-700 text-white text-xs font-bold
-                         py-1.5 px-3 rounded transition-all duration-200 flex items-center"
-                >
-                  CONFIRM
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-3 w-3 ml-1"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  > <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /> </svg>
-                </button>
-                <!-- Next Button -->
-                <button
-                  v-if="result"
-                  @click="nextScreenshot"
-                  class="bg-halo-blue hover:bg-blue-700 text-white text-xs font-bold
-                         py-1.5 px-3 rounded transition-all duration-200 flex items-center"
-                >
-                  NEXT
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-3 w-3 ml-1"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  > <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" /> </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- Accuracy/Points UI -->
-            <div v-if="result" class="p-2 bg-black/40 border-b border-halo-blue/30">
-              <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-3">
-                  <div class="flex items-center">
-                    <div class="text-xs text-gray-400 mr-1">Accuracy:</div>
-                    <div class="text-sm font-bold text-halo-green">{{ accuracy.toFixed(0) }}%</div>
-                  </div>
-                  <div class="h-4 w-px bg-halo-blue/30"></div>
-                  <div class="flex items-center">
-                    <div class="text-xs text-gray-400 mr-1">Points:</div>
-                    <div class="text-sm font-bold text-halo-green">+{{ result.score }}</div>
-                  </div>
-                </div>
-                <div class="flex items-center">
-                  <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden" style="width: 100px">
-                    <div
-                      class="h-full bg-gradient-to-r from-red-500 to-halo-green"
-                      :style="`width: ${accuracy.toFixed(0)}%`"
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Map Canvas -->
-            <div class="flex-grow relative">
-              <!-- Timeout Overlay -->
-              <div
-                v-if="showTimeoutOverlay"
-                class="absolute inset-0 bg-red-900/80 backdrop-blur-sm flex flex-col items-center justify-center z-20 text-white"
-              >
-                 <font-awesome-icon :icon="['fas', 'clock']" class="text-4xl mb-3 animate-ping" />
-                 <p class="text-xl font-bold">TIME'S UP!</p>
-                 <p class="text-sm">Processing result...</p>
-              </div>
-              <!-- Processing Overlay -->
-              <div
-                v-if="hasGuessed && !result && !showTimeoutOverlay"
-                class="absolute inset-0 bg-black/70 flex items-center justify-center z-10"
-              >
-                <div class="animate-pulse text-halo-green font-bold flex items-center">
-                  <svg
-                    class="animate-spin -ml-1 mr-3 h-5 w-5 text-halo-green"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  > <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle> <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path> </svg>
-                  Processing
-                </div>
-              </div>
-              <MapCanvas
-                v-if="screenshot"
-                :map-path="screenshot.maps?.image_path"
-                :correct-location="result?.correctLocation"
-                :disabled="hasGuessed"
-                @map-loaded="onMapLoaded"
-                @select="onSelect"
-              />
-            </div>
+          <div class="sum-cta">
+            <button class="again" @click="playAgain">↻ Play Again</button>
+            <button class="home" @click="exitSession">⌂ Home</button>
           </div>
         </div>
       </div>
+    </Transition>
+
+    <!-- Mod info panel (debug, Ctrl/Cmd+K) -->
+    <div v-if="showModInfo && screenshot" class="mod-info">
+      <div class="mod-label">Mod Info</div>
+      <div class="mono">ID: {{ screenshot.id }}</div>
+      <div class="mod-hint">Press {{ isMac ? '⌘' : 'Ctrl' }}+K to hide</div>
     </div>
-
-    <!-- Game Complete Screen -->
-    <div
-      v-if="(activeSession || !activeSession && sessionData.maxRounds > 0) && sessionComplete"
-      class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-    >
-      <div class="max-w-2xl w-full p-6 bg-halo-gray/30 backdrop-blur-sm rounded-lg shadow-2xl">
-        <h2 class="text-3xl font-light text-blue-400 mb-6 text-center">Game Complete!</h2>
-        <div class="bg-black/50 rounded-lg p-5 mb-6">
-          <div class="text-center mb-6">
-            <div class="text-5xl font-mono font-bold text-halo-green mb-2">{{ sessionData.totalScore }}</div>
-            <div class="text-gray-400 uppercase text-sm tracking-wider">Total Score</div>
-          </div>
-          <div class="space-y-3 max-h-60 overflow-y-auto pr-2">
-            <div v-for="(round, index) in sessionRounds" :key="index"
-                class="flex items-center justify-between p-2 border-b border-halo-blue/20 last:border-b-0">
-              <div class="flex items-center">
-                <div class="w-8 h-8 rounded-full bg-halo-blue/20 flex items-center justify-center mr-3 text-sm">
-                  {{ round.round_number }}
-                </div>
-                <div class="text-sm text-gray-300">{{ getRoundDescription(round) }}</div>
-              </div>
-              <div class="font-mono font-bold text-halo-green">{{ round.score }}</div>
-            </div>
-          </div>
-        </div>
-        <div class="flex space-x-4">
-          <button
-            @click="exitSession"
-            class="flex-1 bg-halo-blue/20 hover:bg-halo-blue/40 text-white py-3 px-4 rounded transition-colors"
-          > Back to Menu </button>
-          <button
-            @click="playAgainWithSameSettings"
-            class="flex-1 bg-halo-green hover:bg-lime-500 text-black font-bold py-3 px-4 rounded transition-colors flex items-center justify-center"
-          > Play Again </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Initial Loading State -->
-    <div
-      v-if="!screenshot && !sessionComplete && isLoadingInitial"
-      class="flex-grow flex items-center justify-center"
-    > <div class="text-center"> <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-halo-green mb-4"></div> <p class="text-lg text-blue-300">Loading Halo location...</p> </div> </div>
-
-    <!-- Loading Overlay for Next Round -->
-    <div
-      v-if="isLoadingNextLevel && !isLoadingInitial"
-      class="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
-    > <div class="text-center"> <div class="inline-block animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-halo-green mb-4"></div> <p class="text-xl text-halo-green font-bold">Loading Next Location</p> <div class="mt-3 w-40 h-1 bg-gray-800 rounded-full mx-auto overflow-hidden"> <div class="h-full bg-halo-green animate-pulse"></div> </div> </div> </div>
-
-    <!-- Mod Info Panel -->
-    <div
-      v-if="showModInfo && screenshot"
-      class="fixed bottom-4 right-4 bg-black/80 text-halo-green p-3 rounded shadow-lg z-50 border border-halo-blue/50"
-    > <div class="text-xs uppercase tracking-wider text-blue-400 mb-1">Mod Info</div> <div class="font-mono">ID: {{ screenshot.id }}</div> <div class="mt-2 text-xs text-gray-400"> Press {{ isMac ? '⌘' : 'Ctrl' }}+K to hide </div> </div>
   </div>
 </template>
 
 <script setup>
-// --- Imports and Setup ---
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import MapCanvas from '~/components/MapCanvas.vue';
@@ -323,36 +218,60 @@ import MapCanvas from '~/components/MapCanvas.vue';
 const route = useRoute();
 const router = useRouter();
 
-// --- State Refs ---
+// Lock body scroll for immersive layout
+onMounted(() => { document.body.style.overflow = 'hidden'; });
+onUnmounted(() => { document.body.style.overflow = ''; });
+
+// --- Core state ---
 const screenshot = ref(null);
 const result = ref(null);
-const score = ref(0); // Quick Play score accumulator
+const score = ref(0);
 const hasGuessed = ref(false);
-const currentId = ref(null);
 const isLoadingInitial = ref(true);
-const isLoadingNextLevel = ref(false); // For subsequent loads overlay
+const isLoadingNextLevel = ref(false);
 const screenshotLoaded = ref(false);
 const mapLoaded = ref(false);
 const pendingGuess = ref(null);
 const showModInfo = ref(false);
 const isMac = ref(false);
+const showSummary = ref(false);
+const summaryDisplayScore = ref(0);
+const sheetFull = ref(false);
+let touchStartY = 0;
 
-// Session State / Quick Play State
+// Session state
 const activeSession = ref(null);
-const sessionData = ref({ currentRound: 0, maxRounds: 0, totalScore: 0 });
+const sessionData = ref({ currentRound: 0, maxRounds: 5, totalScore: 0 });
 const sessionRounds = ref([]);
 const sessionComplete = ref(false);
 const sessionSettings = ref(null);
 
-// --- Timer State ---
+// Timer state
 const roundTimeLimit = ref(0);
 const timeLeft = ref(0);
 const timerIntervalId = ref(null);
 const showTimeoutOverlay = ref(false);
 
-// --- Computed Properties ---
-// This computed property determines if both essential images are ready
+// --- Computed ---
 const imagesLoaded = computed(() => screenshotLoaded.value && mapLoaded.value);
+
+const dockIsLoading = computed(() => isLoadingInitial.value || !imagesLoaded.value);
+
+const totalScore = computed(() =>
+  activeSession.value ? sessionData.value.totalScore : score.value
+);
+
+const gameState = computed(() => {
+  if (showSummary.value) return 'summary';
+  if (!screenshot.value || isLoadingInitial.value) return 'loading';
+  if (result.value) return 'result';
+  return 'active';
+});
+
+const isLastRound = computed(() => {
+  const max = sessionData.value.maxRounds;
+  return max > 0 && sessionData.value.currentRound >= max;
+});
 
 const accuracy = computed(() => {
   if (!result.value?.correctLocation || !pendingGuess.value) return 0;
@@ -361,62 +280,73 @@ const accuracy = computed(() => {
   const distance = Math.hypot(dx, dy);
   const perfectRadius = 3;
   const maxDistance = 50;
-
   if (distance <= perfectRadius) return 100;
   if (distance > maxDistance) return 0;
+  return Math.max(0, 100 * (1 - Math.pow((distance - perfectRadius) / (maxDistance - perfectRadius), 1.5)));
+});
 
-  const normalizedDistance = (distance - perfectRadius) / (maxDistance - perfectRadius);
-  return Math.max(0, 100 * (1 - Math.pow(normalizedDistance, 1.5)));
+const rank = computed(() => {
+  const pct = totalScore.value / (sessionData.value.maxRounds * 1000);
+  if (pct > 0.85) return 'MASTER CHIEF';
+  if (pct > 0.6) return 'SPARTAN-II';
+  if (pct > 0.35) return 'ODST TROOPER';
+  return 'FIELD SCOUT';
 });
 
 const formattedTimeLeft = computed(() => {
-    const minutes = Math.floor(timeLeft.value / 60);
-    const seconds = timeLeft.value % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const m = Math.floor(timeLeft.value / 60);
+  const s = timeLeft.value % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 });
+
+function pipClass(i) {
+  if (i < sessionData.value.currentRound) return 'done';
+  if (i === sessionData.value.currentRound) return gameState.value !== 'active' ? 'done' : 'cur';
+  return '';
+}
 
 // --- Watchers ---
 watch(screenshot, () => {
-  // Reset flags when the screenshot *data* changes (before images start loading)
   screenshotLoaded.value = false;
   mapLoaded.value = false;
   pendingGuess.value = null;
   result.value = null;
   showTimeoutOverlay.value = false;
-}, { immediate: false });
-
-// Watch when both images are loaded to start the timer
-watch(imagesLoaded, (newValue) => {
-    // Only start timer if images just finished loading, time limit exists,
-    // user hasn't guessed, and game isn't over.
-    if (newValue && roundTimeLimit.value > 0 && !hasGuessed.value && !sessionComplete.value) {
-        startRoundTimer();
-    }
-    // Hide loading overlays *only* when images are loaded
-    // This handles the case where one image loads much faster than the other.
-    if (newValue) {
-        isLoadingNextLevel.value = false;
-        isLoadingInitial.value = false;
-    }
 });
 
-// --- Lifecycle Hooks ---
+watch(imagesLoaded, (loaded) => {
+  if (loaded) {
+    isLoadingNextLevel.value = false;
+    isLoadingInitial.value = false;
+    if (roundTimeLimit.value > 0 && !hasGuessed.value && !sessionComplete.value) {
+      startRoundTimer();
+    }
+  }
+});
+
+watch(gameState, (state) => {
+  if (state === 'summary') animateValue(summaryDisplayScore, 0, totalScore.value, 1100);
+  if (state === 'result') sheetFull.value = true;
+  if (state === 'active') sheetFull.value = false;
+});
+
+// --- Lifecycle ---
 onMounted(() => {
   const sessionId = route.query.session;
   if (sessionId) {
     activeSession.value = sessionId;
     loadSession(sessionId);
   } else {
-    // Quick Play mode
     sessionData.value = { currentRound: 0, maxRounds: 5, totalScore: 0 };
     sessionRounds.value = [];
     score.value = 0;
     sessionComplete.value = false;
+    showSummary.value = false;
     roundTimeLimit.value = 0;
     fetchScreenshot();
   }
-
-  detectPlatform();
+  isMac.value = typeof navigator !== 'undefined'
+    && navigator.platform.toUpperCase().includes('MAC');
   window.addEventListener('keydown', handleKeyDown);
 });
 
@@ -425,56 +355,41 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
 });
 
-// --- Timer Functions ---
+// --- Timer ---
 function startRoundTimer() {
-    stopRoundTimer();
-    if (roundTimeLimit.value <= 0 || hasGuessed.value) return;
-
-    timeLeft.value = roundTimeLimit.value;
-    timerIntervalId.value = setInterval(() => {
-        timeLeft.value--;
-        if (timeLeft.value <= 0) {
-            handleTimeout();
-        }
-    }, 1000);
+  stopRoundTimer();
+  if (roundTimeLimit.value <= 0 || hasGuessed.value) return;
+  timeLeft.value = roundTimeLimit.value;
+  timerIntervalId.value = setInterval(() => {
+    timeLeft.value--;
+    if (timeLeft.value <= 0) handleTimeout();
+  }, 1000);
 }
 
 function stopRoundTimer() {
-    if (timerIntervalId.value) {
-        clearInterval(timerIntervalId.value);
-        timerIntervalId.value = null;
-    }
+  if (timerIntervalId.value) {
+    clearInterval(timerIntervalId.value);
+    timerIntervalId.value = null;
+  }
 }
 
 function handleTimeout() {
-    stopRoundTimer();
-    if (hasGuessed.value) return;
-
-    console.log("Time's up!");
-    showTimeoutOverlay.value = true;
-    pendingGuess.value = null;
-
-    nextTick(() => {
-        confirmGuess();
-    });
+  stopRoundTimer();
+  if (hasGuessed.value) return;
+  showTimeoutOverlay.value = true;
+  pendingGuess.value = null;
+  nextTick(() => confirmGuess());
 }
 
-
-// --- Async Functions ---
+// --- API calls ---
 async function loadSession(sessionId) {
   isLoadingInitial.value = true;
   sessionComplete.value = false;
   stopRoundTimer();
   try {
-    const response = await fetch(`/api/sessions/${sessionId}`);
-    const data = await response.json();
-
-    if (data.error) {
-      console.error('Failed to load session:', data.error);
-      router.push('/');
-      return;
-    }
-
+    const res = await fetch(`/api/sessions/${sessionId}`);
+    const data = await res.json();
+    if (data.error) { router.push('/'); return; }
     sessionSettings.value = data.settings;
     sessionData.value = {
       currentRound: data.currentRound,
@@ -483,84 +398,59 @@ async function loadSession(sessionId) {
     };
     sessionRounds.value = data.rounds || [];
     roundTimeLimit.value = parseInt(data.settings?.timeLimit, 10) || 0;
-
     if (data.isComplete) {
       sessionComplete.value = true;
-      isLoadingInitial.value = false; // Don't show initial loading if game already complete
+      showSummary.value = true;
+      isLoadingInitial.value = false;
     } else {
-      fetchScreenshot(sessionId); // This will eventually set isLoadingInitial = false
+      fetchScreenshot(sessionId);
     }
-  } catch (error) {
-    console.error('Failed to load session:', error);
+  } catch {
     router.push('/');
     isLoadingInitial.value = false;
   }
-  // No finally block needed here for isLoadingInitial, fetchScreenshot handles it
 }
 
 async function fetchScreenshot(sessionId = null) {
-  // Set loading state *before* the fetch starts
-  if (!isLoadingInitial.value) {
-    isLoadingNextLevel.value = true; // Show overlay only for next rounds
-  }
+  if (!isLoadingInitial.value) isLoadingNextLevel.value = true;
   hasGuessed.value = false;
   stopRoundTimer();
-
-  // Reset image loaded flags *before* fetching new data
-  // This ensures imagesLoaded becomes false immediately
   screenshotLoaded.value = false;
   mapLoaded.value = false;
-
   try {
     const endpoint = sessionId
       ? `/api/levels/random?sessionId=${sessionId}`
       : '/api/levels/random';
-
     const res = await fetch(endpoint);
     const data = await res.json();
-
-    // Handle errors first
     if (data.error) {
-      isLoadingInitial.value = false; // Ensure loading stops on error
+      isLoadingInitial.value = false;
       isLoadingNextLevel.value = false;
-      if (sessionId && data.sessionComplete) {
-        loadSession(sessionId); // Reload to show final screen
-        return;
-      }
-      console.error("Error fetching screenshot:", data.error);
+      if (sessionId && data.sessionComplete) { showSummary.value = true; return; }
       if (!sessionId && sessionData.value.currentRound > 0) {
-          sessionComplete.value = true;
-          sessionData.value.totalScore = score.value;
+        sessionComplete.value = true;
+        sessionData.value.totalScore = score.value;
+        showSummary.value = true;
       } else { router.push('/'); }
       return;
     }
-
-    // Update state with new data
-    screenshot.value = data; // This triggers the watcher to reset flags again, which is fine
-    currentId.value = data.id;
-
-    // Update round counter and time limit
+    screenshot.value = data;
     if (data.sessionData) {
-        roundTimeLimit.value = parseInt(data.sessionData.timeLimit, 10) || 0;
-        if (sessionId) {
-            sessionData.value.currentRound = data.sessionData.currentRound;
-            sessionData.value.maxRounds = data.sessionData.maxRounds;
-        } else {
-            sessionData.value.currentRound++;
-        }
+      roundTimeLimit.value = parseInt(data.sessionData.timeLimit, 10) || 0;
+      if (sessionId) {
+        sessionData.value.currentRound = data.sessionData.currentRound;
+        sessionData.value.maxRounds = data.sessionData.maxRounds;
+      } else {
+        sessionData.value.currentRound++;
+      }
     } else {
-        roundTimeLimit.value = 0;
-        if (!sessionId) sessionData.value.currentRound++;
+      roundTimeLimit.value = 0;
+      if (!sessionId) sessionData.value.currentRound++;
     }
-
-  } catch (e) {
-    console.error("Fetch screenshot exception:", e);
-    isLoadingInitial.value = false; // Ensure loading stops on error
+  } catch {
+    isLoadingInitial.value = false;
     isLoadingNextLevel.value = false;
     router.push('/');
-  } finally {
-     // Don't set isLoadingInitial to false here - let the image loading watcher handle it
-     // This ensures content doesn't become invisible while images are still loading
   }
 }
 
@@ -568,126 +458,800 @@ async function confirmGuess() {
   if (hasGuessed.value) return;
   stopRoundTimer();
   hasGuessed.value = true;
-
   try {
-    const requestBody = {
-      id: screenshot.value.id,
-      guess: pendingGuess.value,
-    };
-    if (activeSession.value) {
-      requestBody.sessionId = activeSession.value;
-    }
-
+    const body = { id: screenshot.value.id, guess: pendingGuess.value };
+    if (activeSession.value) body.sessionId = activeSession.value;
     const res = await fetch('/api/guess', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
-
-    if (data.error) {
-      console.error("Guess error:", data.error);
-      hasGuessed.value = false; // Allow retry
-      return;
-    }
-
+    if (data.error) { hasGuessed.value = false; return; }
     result.value = data;
     showTimeoutOverlay.value = false;
-
-    const completedRoundData = {
-        round_number: sessionData.value.currentRound,
-        score: data.score,
-        level_id: screenshot.value.id,
+    const roundEntry = {
+      round_number: sessionData.value.currentRound,
+      score: data.score,
+      level_id: screenshot.value.id,
+      mapName: screenshot.value.maps?.name || data.mapName || '',
     };
-
     if (activeSession.value && data.sessionData) {
       sessionData.value = {
         currentRound: data.sessionData.currentRound,
         maxRounds: data.sessionData.maxRounds,
         totalScore: data.sessionData.totalScore,
       };
-      sessionRounds.value.push(completedRoundData);
+      sessionRounds.value.push(roundEntry);
+      if (data.sessionData.isComplete) sessionComplete.value = true;
     } else if (!activeSession.value) {
       score.value += data.score;
-      sessionRounds.value.push(completedRoundData);
+      sessionRounds.value.push(roundEntry);
       if (sessionData.value.currentRound >= sessionData.value.maxRounds) {
-          sessionComplete.value = true;
-          sessionData.value.totalScore = score.value;
+        sessionComplete.value = true;
+        sessionData.value.totalScore = score.value;
       }
     }
-  } catch (e) {
-    console.error("Confirm guess exception:", e);
-    hasGuessed.value = false;
-  }
+  } catch { hasGuessed.value = false; }
 }
 
-// --- Action Functions ---
+// --- Actions ---
 function nextScreenshot() {
-    stopRoundTimer();
-    if (activeSession.value && sessionData.value.maxRounds > 0 && sessionData.value.currentRound >= sessionData.value.maxRounds) {
-        loadSession(activeSession.value);
-        return;
-    }
-    if (!activeSession.value && sessionComplete.value) {
-        return;
-    }
-
-  // Don't reset flags here, fetchScreenshot does it
-  // screenshotLoaded.value = false;
-  // mapLoaded.value = false;
+  stopRoundTimer();
+  if (sessionComplete.value) { showSummary.value = true; return; }
   result.value = null;
   pendingGuess.value = null;
   showTimeoutOverlay.value = false;
-
   fetchScreenshot(activeSession.value);
 }
 
-function exitSession() {
-  stopRoundTimer();
-  router.push('/');
-}
+function exitSession() { stopRoundTimer(); router.push('/'); }
+function playAgain() { stopRoundTimer(); router.push('/'); }
 
-function playAgainWithSameSettings() {
-  stopRoundTimer();
-  router.push('/');
-}
-
-function getRoundDescription(round) {
-  return `Round ${round.round_number}`;
-}
-
-// --- Helper Functions ---
-function onScreenshotLoaded() {
-  screenshotLoaded.value = true;
-  // The watcher for imagesLoaded handles setting isLoadingNextLevel = false
-  // and starting the timer. No need to duplicate logic here.
-}
-
-function onMapLoaded() {
-  mapLoaded.value = true;
-  // The watcher for imagesLoaded handles setting isLoadingNextLevel = false
-  // and starting the timer. No need to duplicate logic here.
-}
-
-function onSelect(coords) {
-  if (!hasGuessed.value) {
-      pendingGuess.value = coords;
-  }
-}
-
-function detectPlatform() {
-  if (typeof navigator !== 'undefined') {
-    isMac.value = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-  }
-}
+function onScreenshotLoaded() { screenshotLoaded.value = true; }
+function onMapLoaded() { mapLoaded.value = true; }
+function onSelect(coords) { if (!hasGuessed.value) pendingGuess.value = coords; }
 
 function handleKeyDown(e) {
   if ((isMac.value ? e.metaKey : e.ctrlKey) && e.key === 'k') {
     e.preventDefault();
-    if (screenshot.value) {
-      console.log('Screenshot ID:', screenshot.value.id);
-      showModInfo.value = !showModInfo.value;
-    }
+    if (screenshot.value) showModInfo.value = !showModInfo.value;
   }
 }
+
+function toggleSheet() { sheetFull.value = !sheetFull.value; }
+function onHandleTouchStart(e) { touchStartY = e.touches[0].clientY; }
+function onHandleTouchEnd(e) {
+  e.preventDefault(); // prevent the synthetic click from also firing
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dy) < 8) toggleSheet();
+  else sheetFull.value = dy < 0;
+}
+
+function animateValue(target, from, to, duration) {
+  const t0 = performance.now();
+  target.value = from;
+  function step(t) {
+    const k = Math.min(1, (t - t0) / duration);
+    target.value = Math.round(to * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
 </script>
+
+<style scoped>
+/* ── Design tokens ──────────────────────────────────────── */
+.play-root {
+  --bg: #050807;
+  --panel: #0b1310;
+  --panel-2: #0f1a15;
+  --line: rgba(106,224,154,0.16);
+  --line-strong: rgba(106,224,154,0.34);
+  --green: #4fe08a;
+  --green-bright: #6dffa4;
+  --amber: #f2b441;
+  --text: #d4e7da;
+  --muted: #6f8a7a;
+  --muted-2: #46594e;
+
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  font-family: 'Chakra Petch', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ── CRT scanlines ──────────────────────────────────────── */
+.scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 300;
+  background: repeating-linear-gradient(
+    0deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.13) 3px, rgba(0,0,0,0) 4px
+  );
+  opacity: .35;
+}
+
+/* ── Corner bracket decoration ──────────────────────────── */
+.brk { position: relative; }
+.brk::before, .brk::after {
+  content: "";
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid var(--green);
+  pointer-events: none;
+  z-index: 6;
+  opacity: .8;
+}
+.brk::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.brk::after  { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+/* ── Full-bleed feed ────────────────────────────────────── */
+.feed {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(165deg,#16223a,#0c1322 55%,#1a130c);
+  overflow: hidden;
+}
+.feed-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.feed-stripes {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    135deg, rgba(255,255,255,.016) 0 11px, transparent 11px 22px
+  );
+}
+.feed-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(120,180,150,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120,180,150,.045) 1px, transparent 1px);
+  background-size: 54px 54px;
+}
+.feed-vig {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 75% at 50% 38%, transparent 45%, rgba(0,0,0,.62));
+}
+.feed-ph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+.feed-ph .t {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(180,210,200,.42);
+  line-height: 2.2;
+}
+.feed-ph .t small {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: rgba(180,210,200,.26);
+}
+
+/* ── Top HUD bar ────────────────────────────────────────── */
+.topbar {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  right: 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  z-index: 40;
+}
+
+.chip {
+  background: rgba(5,8,7,.74);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(6px);
+}
+
+.chip-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 15px;
+}
+.chip-brand .mark { width: 24px; height: 27px; }
+.chip-brand .lt { font-weight: 700; font-size: 15px; letter-spacing: 2px; }
+.chip-brand .lt b { color: var(--green); }
+
+.chip-round {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 11px 16px;
+}
+.round-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.round-lbl b { color: var(--text); font-size: 13px; }
+
+.pips { display: flex; gap: 5px; }
+.pip { width: 22px; height: 5px; background: var(--line); }
+.pip.done { background: var(--green); }
+.pip.cur  { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+
+.chip-score {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 16px;
+}
+.chip-score .star { color: var(--amber); }
+.chip-score .l {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.chip-score .v {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--green-bright);
+}
+
+.chip-timer {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 15px;
+  color: var(--text);
+}
+.chip-timer .t {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+.chip-timer.low .t { color: var(--amber); }
+
+.exit-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: rgba(5,8,7,.74);
+  border: 1px solid var(--line);
+  padding: 12px 15px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.exit-btn:hover { color: var(--amber); border-color: rgba(242,180,65,.4); }
+
+/* ── Game label (bottom-left) ───────────────────────────── */
+.gamelbl {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: rgba(5,8,7,.74);
+  border: 1px solid var(--line);
+  padding: 11px 15px;
+  backdrop-filter: blur(6px);
+}
+.gamelbl .ic { color: var(--green); }
+.gamelbl .k {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.gamelbl .v { font-size: 14px; font-weight: 700; letter-spacing: .5px; }
+
+/* ── Map dock (bottom-right) ────────────────────────────── */
+.mapdock {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 50;
+  width: 360px;
+  background: rgba(5,8,7,.88);
+  border: 1px solid var(--line-strong);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 14px 50px rgba(0,0,0,.5);
+  transition: width .28s cubic-bezier(.2,.8,.2,1), opacity .25s;
+}
+.mapdock.is-loading {
+  opacity: 0;
+  pointer-events: none;
+}
+.mapdock:hover, .mapdock.open { width: 560px; }
+
+.mapdock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.mapdock-head h2 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--green);
+}
+.mapdock-head .exp {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--muted-2);
+}
+
+.map-wrap {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+  transition: height .28s cubic-bezier(.2,.8,.2,1);
+}
+.mapdock:hover .map-wrap, .mapdock.open .map-wrap { height: 360px; }
+
+/* Map overlays */
+.map-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(5,8,7,.75);
+  backdrop-filter: blur(3px);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--green);
+}
+.timeout-overlay { color: var(--amber); }
+
+.proc-ring {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--line);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+.proc-lbl { color: var(--green); }
+
+/* ── Map dock footer ────────────────────────────────────── */
+.mapdock-foot { padding: 12px 14px; border-top: 1px solid var(--line); }
+
+.confirm {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #06120b;
+  background: var(--green);
+  border: none;
+  padding: 14px;
+  cursor: pointer;
+  clip-path: polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
+  box-shadow: 0 0 22px rgba(79,224,138,.3);
+  transition: background .15s;
+}
+.confirm:hover:not(:disabled) { background: var(--green-bright); }
+.confirm:disabled {
+  background: var(--panel-2);
+  color: var(--muted-2);
+  box-shadow: none;
+  cursor: not-allowed;
+  clip-path: none;
+  border: 1px dashed var(--line-strong);
+}
+
+/* Result bar */
+.resultbar {}
+.res-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 11px;
+}
+.res-pts .n {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--green-bright);
+  line-height: 1;
+}
+.res-pts .u {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.res-mid { text-align: center; font-family: 'JetBrains Mono', monospace; }
+.res-mid .nm { font-size: 12px; font-weight: 700; color: var(--text); }
+.res-mid .k { font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--green); }
+.res-dist { text-align: right; font-family: 'JetBrains Mono', monospace; }
+.res-dist .n { font-size: 18px; font-weight: 700; color: var(--amber); }
+.res-dist .u { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+
+.res-meter {
+  height: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.res-meter i {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  background: linear-gradient(90deg, var(--amber), var(--green));
+  transition: width 1s cubic-bezier(.2,.8,.2,1);
+}
+
+.next {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #06120b;
+  background: var(--amber);
+  border: none;
+  padding: 13px;
+  cursor: pointer;
+  clip-path: polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
+  box-shadow: 0 0 22px rgba(242,180,65,.28);
+}
+.next:hover { filter: brightness(1.08); }
+
+/* ── Between-rounds loader ──────────────────────────────── */
+.round-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(5,8,7,.82);
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.rl-ring {
+  width: 56px;
+  height: 56px;
+  border: 2.5px solid var(--line);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin .9s linear infinite;
+}
+.rl-t {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--green);
+}
+.rl-bar {
+  width: 160px;
+  height: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+.rl-fill {
+  height: 100%;
+  background: var(--green);
+  animation: pulse-bar 1.2s ease-in-out infinite;
+}
+
+/* ── Summary overlay ────────────────────────────────────── */
+.summary {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(5,8,7,.93);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.sum-card {
+  width: 640px;
+  max-width: 100%;
+  max-height: calc(100vh - 80px);
+  overflow: hidden auto;
+  scrollbar-width: none;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  padding: 34px 38px 32px;
+}
+.sum-card::-webkit-scrollbar { display: none; }
+.sum-kick {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 8px;
+}
+.sum-card h2 { font-size: 34px; font-weight: 700; letter-spacing: .5px; margin-bottom: 4px; }
+.sum-rank {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 24px;
+}
+.sum-total {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 18px 0;
+  margin-bottom: 18px;
+}
+.sum-total .n {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--green-bright);
+  line-height: 1;
+}
+.sum-total .max {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  color: var(--muted);
+}
+.sum-total .u {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: right;
+  line-height: 1.7;
+}
+.sum-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 26px; }
+.sum-r {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 13px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+}
+.sum-r .i { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+.sum-r .nm { font-size: 14px; font-weight: 600; }
+.sum-r .p { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--green-bright); }
+
+.sum-cta { display: flex; gap: 12px; }
+.sum-cta button {
+  flex: 1;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 15px;
+  cursor: pointer;
+  border: none;
+  clip-path: polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
+}
+.sum-cta .again {
+  color: #06120b;
+  background: var(--green);
+  box-shadow: 0 0 22px rgba(79,224,138,.3);
+}
+.sum-cta .again:hover { background: var(--green-bright); }
+.sum-cta .home {
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  clip-path: none;
+}
+.sum-cta .home:hover { color: var(--green); border-color: var(--green); }
+
+/* ── Mod info panel ─────────────────────────────────────── */
+.mod-info {
+  position: fixed;
+  bottom: 4px;
+  left: 4px;
+  background: rgba(5,8,7,.9);
+  color: var(--green);
+  padding: 10px 14px;
+  z-index: 200;
+  border: 1px solid var(--line-strong);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.mod-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.mod-hint { font-size: 9px; color: var(--muted-2); margin-top: 6px; }
+
+/* ── Transitions ────────────────────────────────────────── */
+.fade-enter-active, .fade-leave-active { transition: opacity .35s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* ── Keyframes ──────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse-bar {
+  0%, 100% { width: 20%; transform: translateX(0); }
+  50% { width: 60%; transform: translateX(100px); }
+}
+
+/* ── Mobile scrim ───────────────────────────────────────── */
+.mob-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 48;
+  background: rgba(5,8,7,.5);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .28s;
+}
+
+/* ── Bottom sheet handle (mobile) ───────────────────────── */
+.handle-zone {
+  display: none;
+  padding: 10px 0 4px;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+}
+.handle {
+  width: 42px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--line-strong);
+}
+
+/* ── Sheet-hidden game label ────────────────────────────── */
+.gamelbl.sheet-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Mobile ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Safe area top for notch */
+  .topbar {
+    top: max(10px, env(safe-area-inset-top));
+    left: 10px;
+    right: 10px;
+    gap: 6px;
+  }
+  .chip-brand { display: none; }
+  .pips { display: none; }
+
+  .chip-round { padding: 9px 11px; gap: 7px; }
+  .round-lbl { font-size: 9px; }
+  .round-lbl b { font-size: 11px; }
+
+  .chip-score { padding: 9px 11px; gap: 6px; }
+  .chip-score .l { display: none; }
+  .chip-score .v { font-size: 14px; }
+
+  .chip-timer { padding: 9px 10px; gap: 6px; }
+  .chip-timer .t { font-size: 13px; }
+
+  .exit-btn { padding: 9px 12px; font-size: 10px; letter-spacing: 1px; }
+
+  /* Game label: bottom-left, fades when sheet is full */
+  .gamelbl {
+    bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+    transition: opacity .2s;
+  }
+
+  /* Mobile scrim */
+  .mob-scrim { display: block; }
+  .mob-scrim.visible { opacity: 1; pointer-events: auto; }
+
+  /* Show drag handle */
+  .handle-zone { display: flex; }
+
+  /* Map dock: full-width bottom sheet */
+  .mapdock {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    transition: opacity .25s;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  /* Disable hover-expand on touch */
+  .mapdock:hover { width: auto; }
+  .mapdock-head .exp { display: none; }
+  .map-wrap { height: 180px; }
+  .mapdock:hover .map-wrap { height: 180px; }
+  .mapdock.open .map-wrap,
+  .mapdock.sheet-full .map-wrap { height: 280px; }
+
+  .mapdock-foot { padding: 10px 12px; }
+  .confirm { font-size: 14px; padding: 13px; letter-spacing: 1.5px; }
+  .next { font-size: 14px; padding: 12px; letter-spacing: 1.5px; }
+
+  .res-pts .n { font-size: 22px; }
+  .res-dist .n { font-size: 15px; }
+
+  /* Summary: full-screen, compact */
+  .summary { padding: 0; align-items: stretch; }
+  .sum-card {
+    width: 100%;
+    max-height: 100dvh;
+    padding: 22px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+    border: none;
+  }
+  .sum-kick { font-size: 10px; margin-bottom: 6px; }
+  .sum-card h2 { font-size: 26px; }
+  .sum-rank { font-size: 11px; margin-bottom: 14px; }
+  .sum-total { padding: 12px 0; margin-bottom: 14px; }
+  .sum-total .n { font-size: 40px; }
+  .sum-total .max { font-size: 13px; }
+  .sum-list { gap: 5px; margin-bottom: 16px; }
+  .sum-r { padding: 9px 11px; gap: 10px; }
+  .sum-r .nm { font-size: 13px; }
+  .sum-r .p { font-size: 14px; }
+  .sum-cta button { font-size: 13px; padding: 13px; }
+}
+</style>
