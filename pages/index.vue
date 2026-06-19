@@ -106,7 +106,10 @@
         <div class="hero-actions">
           <div class="hero-cta">
             <button class="cta-main" @click="startPresetGame(presets[0])" :disabled="isStarting">Quick Play</button>
-            <a href="https://ko-fi.com/haloguessr" target="_blank" rel="noopener noreferrer" class="cta-ghost">Donate</a>
+            <a href="https://ko-fi.com/haloguessr" target="_blank" rel="noopener noreferrer" class="cta-ghost">
+              <svg width="14" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true"><path d="M6.5 11.5C3 9 1 6.8 1 4.4 1 2.8 2.2 1.7 3.7 1.7c1 0 1.8.5 2.8 1.6 1-1.1 1.8-1.6 2.8-1.6C11.8 1.7 13 2.8 13 4.4c0 2.4-2 4.6-5.5 7.1Z" fill="currentColor"/></svg>
+              Donate
+            </a>
           </div>
           <p v-if="startError" class="start-error-inline">{{ startError }}</p>
         </div>
@@ -623,17 +626,28 @@ header {
 .cta-main:hover:not(:disabled) { background: var(--green-bright); }
 .cta-main:disabled { opacity: 0.6; cursor: not-allowed; }
 .cta-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: var(--muted);
-  background: transparent;
-  border: 1px solid var(--line-strong);
-  padding: 16px 20px;
+  color: var(--green);
+  background: rgba(79,224,138,0.06);
+  border: 1px solid rgba(79,224,138,0.38);
+  padding: 16px 22px;
   cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  transition: background .15s, border-color .15s, box-shadow .15s;
 }
-.cta-ghost:hover { color: var(--green); border-color: var(--green); }
+.cta-ghost:hover {
+  background: rgba(79,224,138,0.13);
+  border-color: rgba(79,224,138,0.65);
+  box-shadow: 0 0 20px rgba(79,224,138,0.18);
+}
 .start-error-inline {
   margin-top: 12px;
   font-family: 'JetBrains Mono', monospace;
@@ -1164,7 +1178,7 @@ footer { margin-top: 60px; border-top: 1px solid var(--line); padding: 28px 0 40
   .hero p { font-size: 14px; }
   .hero-cta { flex-direction: column; gap: 10px; }
   .cta-main { width: 100%; justify-content: center; font-size: 18px; padding: 18px; }
-  .cta-ghost { width: 100%; font-size: 11px; padding: 14px; }
+  .cta-ghost { width: 100%; font-size: 11px; padding: 14px; justify-content: center; }
 
   .presets { padding: 34px 0 0; }
   .preset-grid { grid-template-columns: 1fr; gap: 12px; }
