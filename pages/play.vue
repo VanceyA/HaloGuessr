@@ -68,7 +68,7 @@
         <span class="t">{{ formattedTimeLeft }}</span>
       </div>
 
-      <button class="exit-btn" @click="exitSession">✕ Exit</button>
+      <button class="exit-btn" @click="exitSession">Exit</button>
     </div>
 
     <!-- Game label bottom-left -->
@@ -138,9 +138,9 @@
           :disabled="!pendingGuess || hasGuessed"
           @click="confirmGuess"
         >
-          <template v-if="hasGuessed">◉ Analyzing…</template>
-          <template v-else-if="pendingGuess">◎ Confirm Location</template>
-          <template v-else>◎ Drop a marker first</template>
+          <template v-if="hasGuessed">Analyzing...</template>
+          <template v-else-if="pendingGuess">Confirm Location</template>
+          <template v-else>Drop a marker first</template>
         </button>
 
         <!-- Result bar -->
@@ -161,7 +161,7 @@
           </div>
           <div class="res-meter"><i :style="{ width: accuracy.toFixed(0) + '%' }"></i></div>
           <button class="next" @click="nextScreenshot">
-            {{ isLastRound ? 'View Debrief ▶' : 'Next Round ▶' }}
+            {{ isLastRound ? 'View Debrief' : 'Next Round' }}
           </button>
         </div>
       </div>
@@ -194,8 +194,8 @@
             </div>
           </div>
           <div class="sum-cta">
-            <button class="again" @click="playAgain">↻ Play Again</button>
-            <button class="home" @click="exitSession">⌂ Home</button>
+            <button class="again" @click="playAgain">Play Again</button>
+            <button class="home" @click="exitSession">Home</button>
           </div>
         </div>
       </div>

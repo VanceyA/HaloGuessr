@@ -22,9 +22,23 @@
             Donate
           </a>
         </div>
-        <button class="menu-btn" aria-label="Open menu"><span></span></button>
+        <button class="menu-btn" :class="{ open: menuOpen }" :aria-expanded="menuOpen" aria-label="Open menu" @click="menuOpen = !menuOpen">
+          <span v-if="!menuOpen"></span>
+          <svg v-else width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l12 12M13 1L1 13"/></svg>
+        </button>
       </div>
     </header>
+
+    <!-- Mobile nav drawer -->
+    <Transition name="drawer">
+      <div v-if="menuOpen" class="mob-drawer">
+        <a href="#" class="mob-nav-link active" @click="menuOpen = false">Play</a>
+        <a href="https://ko-fi.com/haloguessr" target="_blank" rel="noopener noreferrer" class="mob-donate">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 11.5C3 9 1 6.8 1 4.4 1 2.8 2.2 1.7 3.7 1.7c1 0 1.8.5 2.8 1.6 1-1.1 1.8-1.6 2.8-1.6C11.8 1.7 13 2.8 13 4.4c0 2.4-2 4.6-5.5 7.1Z" fill="#07120b"/></svg>
+          Donate
+        </a>
+      </div>
+    </Transition>
 
     <section class="hero">
       <div class="hero-glow"></div>
@@ -54,7 +68,7 @@
             <div class="pp-vig"></div>
             <div class="pp-top">
               <div class="pp-chip">Round <b>1/5</b><div class="pp-pips"><i class="cur"></i><i></i><i></i><i></i><i></i></div></div>
-              <div class="pp-chip pp-score"><span class="star">★</span>Score <b>4,910</b></div>
+              <div class="pp-chip pp-score">Score <b>4,910</b></div>
             </div>
             <div class="pp-chip pp-game">
               <template v-if="previewScreenshot">{{ previewScreenshot.maps?.name }}</template>
@@ -84,14 +98,14 @@
                   <div class="pp-map-pin-amber"></div>
                 </div>
               </div>
-              <div class="pp-confirm">◎ Confirm</div>
+              <div class="pp-confirm">Confirm</div>
             </div>
           </div>
         </div>
 
         <div class="hero-actions">
           <div class="hero-cta">
-            <button class="cta-main" @click="startPresetGame(presets[0])" :disabled="isStarting">▶ Quick Play</button>
+            <button class="cta-main" @click="startPresetGame(presets[0])" :disabled="isStarting">Quick Play</button>
             <a href="https://ko-fi.com/haloguessr" target="_blank" rel="noopener noreferrer" class="cta-ghost">Donate</a>
           </div>
           <p v-if="startError" class="start-error-inline">{{ startError }}</p>
@@ -150,7 +164,7 @@
                 <button class="rbtn" @click="increaseRounds" :disabled="settings.unlimited || settings.rounds >= 50">+</button>
               </div>
               <button class="unlimited-btn" @click="toggleUnlimitedRounds">
-                {{ settings.unlimited ? '↺ Set Round Limit' : '↻ Go Unlimited' }}
+                {{ settings.unlimited ? 'Set Round Limit' : 'Go Unlimited' }}
               </button>
               <div class="field-label" style="margin-top:30px">// Time Limit per Round</div>
               <div class="time-row">
@@ -170,7 +184,7 @@
               <div class="field-label">// Halo Games</div>
               <div class="games">
                 <div class="game all" @click="toggleSelectAllEnabled">
-                  <span>⊞ Select All Enabled</span>
+                  <span>Select All Enabled</span>
                 </div>
                 <div
                   v-for="game in availableGames"
@@ -192,7 +206,7 @@
           </div>
           <div class="startbar">
             <button class="start" @click="startCustomGame" :disabled="isStarting || settings.games.length === 0">
-              {{ isStarting ? '⟳ Deploying...' : '▶ Deploy Game' }}
+              {{ isStarting ? 'Deploying...' : 'Deploy Game' }}
             </button>
             <div class="start-meta">
               CONFIG: <b>{{ settings.unlimited ? '∞' : settings.rounds }} ROUNDS</b> · <b>{{ getTimeLimitLabel() }}</b><br/>
@@ -223,6 +237,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const isStarting = ref(false);
 const startError = ref(null);
+const menuOpen = ref(false);
 
 const previewScreenshot = ref({
   screenshotPath: 'https://3qsaoqq5emn9nlet.public.blob.vercel-storage.com/screenshots/6UcoKDxPNAULPZdLcOF9c_image_2025-04-24_111129050.png',
@@ -698,7 +713,6 @@ header {
 .pp-pips i.cur { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
 .pp-pips i.done { background: var(--green); }
 .pp-score { margin-left: auto; }
-.pp-score .star { color: var(--amber); font-size: 11px; }
 .pp-game {
   position: absolute;
   left: 12px; bottom: 12px;
@@ -1037,6 +1051,53 @@ footer { margin-top: 60px; border-top: 1px solid var(--line); padding: 28px 0 40
   box-shadow: 0 6px 0 currentColor, 0 -6px 0 currentColor;
 }
 
+/* Mobile drawer */
+.mob-drawer {
+  position: fixed;
+  top: 60px;
+  left: 0; right: 0;
+  z-index: 55;
+  background: rgba(5,8,7,.97);
+  border-bottom: 1px solid var(--line-strong);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px 24px;
+  gap: 4px;
+}
+.mob-nav-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.mob-nav-link.active { color: var(--green); }
+.mob-donate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #07120b;
+  background: var(--green);
+  text-decoration: none;
+  padding: 16px;
+  margin-top: 12px;
+  clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+}
+
+/* Drawer transition */
+.drawer-enter-active, .drawer-leave-active { transition: opacity .18s, transform .18s; }
+.drawer-enter-from, .drawer-leave-to { opacity: 0; transform: translateY(-8px); }
+
 /* ===== responsive ===== */
 @media (max-width: 900px) {
   .wrap { padding: 0 18px; }
@@ -1074,6 +1135,9 @@ footer { margin-top: 60px; border-top: 1px solid var(--line); padding: 28px 0 40
   .preset h3 { font-size: 20px; }
   .cg-grid { grid-template-columns: 1fr; }
   .custom { padding: 38px 0 0; }
+  .startbar { flex-direction: column; align-items: stretch; }
+  .start { font-size: 18px; padding: 18px; }
+  .start-meta { text-align: center; white-space: normal; }
   .foot-row { flex-direction: column; gap: 16px; }
   .foot-links { flex-wrap: wrap; gap: 12px; }
   footer { margin-top: 38px; padding: 24px 0 calc(24px + env(safe-area-inset-bottom, 20px)); }
