@@ -76,7 +76,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 
 const props = defineProps({
   mapPath: String,
@@ -89,6 +89,8 @@ const props = defineProps({
 const emit = defineEmits(['select', 'map-loaded'])
 const mapImage = ref(null)
 const guess = ref(null)
+const mapSize = ref({ width: 0, height: 0 })
+let resizeObserver = null
 
 // Reset guess when the mapPath changes
 watch(
@@ -114,8 +116,17 @@ const handleMapLoaded = () => {
   emit('map-loaded')
 }
 
-// If there's an initial marker (e.g. on mount), set it once image is ready
 onMounted(() => {
+  resizeObserver = new ResizeObserver(entries => {
+    const entry = entries[0]
+    if (entry) {
+      const { width, height } = entry.contentRect
+      mapSize.value = { width, height }
+    }
+  })
+  if (mapImage.value) resizeObserver.observe(mapImage.value)
+
+  // If there's an initial marker (e.g. on mount), set it once image is ready
   if (!props.initialMarker) return
   const img = mapImage.value
   const setIt = () => {
@@ -130,11 +141,14 @@ onMounted(() => {
   img.complete ? setIt() : (img.onload = setIt)
 })
 
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+})
+
 const guessStyle = computed(() => {
-  if (!guess.value || !mapImage.value) return {}
-  const rect = mapImage.value.getBoundingClientRect()
-  const pixelX = (guess.value.x / 100) * rect.width
-  const pixelY = (guess.value.y / 100) * rect.height
+  if (!guess.value || !mapSize.value.width) return {}
+  const pixelX = (guess.value.x / 100) * mapSize.value.width
+  const pixelY = (guess.value.y / 100) * mapSize.value.height
   return {
     left: `${pixelX}px`,
     top: `${pixelY}px`,
@@ -143,10 +157,9 @@ const guessStyle = computed(() => {
 })
 
 const correctLocationStyle = computed(() => {
-  if (!props.correctLocation || !mapImage.value) return {}
-  const rect = mapImage.value.getBoundingClientRect()
-  const pixelX = (props.correctLocation.x / 100) * rect.width
-  const pixelY = (props.correctLocation.y / 100) * rect.height
+  if (!props.correctLocation || !mapSize.value.width) return {}
+  const pixelX = (props.correctLocation.x / 100) * mapSize.value.width
+  const pixelY = (props.correctLocation.y / 100) * mapSize.value.height
   return {
     left: `${pixelX}px`,
     top: `${pixelY}px`,
@@ -155,12 +168,11 @@ const correctLocationStyle = computed(() => {
 })
 
 const lineStyle = computed(() => {
-  if (!guess.value || !props.correctLocation || !mapImage.value) return {}
-  const rect = mapImage.value.getBoundingClientRect()
-  const x1 = (guess.value.x / 100) * rect.width
-  const y1 = (guess.value.y / 100) * rect.height
-  const x2 = (props.correctLocation.x / 100) * rect.width
-  const y2 = (props.correctLocation.y / 100) * rect.height
+  if (!guess.value || !props.correctLocation || !mapSize.value.width) return {}
+  const x1 = (guess.value.x / 100) * mapSize.value.width
+  const y1 = (guess.value.y / 100) * mapSize.value.height
+  const x2 = (props.correctLocation.x / 100) * mapSize.value.width
+  const y2 = (props.correctLocation.y / 100) * mapSize.value.height
   const length = Math.hypot(x2 - x1, y2 - y1)
   const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI
   return {
@@ -176,12 +188,11 @@ const lineStyle = computed(() => {
 })
 
 const distanceLabelStyle = computed(() => {
-  if (!guess.value || !props.correctLocation || !mapImage.value) return {}
-  const rect = mapImage.value.getBoundingClientRect()
-  const x1 = (guess.value.x / 100) * rect.width
-  const y1 = (guess.value.y / 100) * rect.height
-  const x2 = (props.correctLocation.x / 100) * rect.width
-  const y2 = (props.correctLocation.y / 100) * rect.height
+  if (!guess.value || !props.correctLocation || !mapSize.value.width) return {}
+  const x1 = (guess.value.x / 100) * mapSize.value.width
+  const y1 = (guess.value.y / 100) * mapSize.value.height
+  const x2 = (props.correctLocation.x / 100) * mapSize.value.width
+  const y2 = (props.correctLocation.y / 100) * mapSize.value.height
   const midX = (x1 + x2) / 2
   const midY = (y1 + y2) / 2
   return {
