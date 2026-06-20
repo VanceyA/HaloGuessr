@@ -180,7 +180,11 @@
         <div class="sum-card brk">
           <div class="sum-kick">Recon Debrief · {{ activeSession ? 'Ranked Play' : 'Quick Play' }}</div>
           <h2>Mission Complete</h2>
-          <div class="sum-rank">RANK · {{ rank }}</div>
+          <div class="sum-rank" :class="`rank-${rank.cls}`">
+            <div class="rank-label">Rank Achieved</div>
+            <div class="rank-name">{{ rank.name }}</div>
+            <div class="rank-flavor">{{ rank.flavor }}</div>
+          </div>
           <div class="sum-total">
             <span class="n">{{ summaryDisplayScore.toLocaleString() }}</span>
             <span class="max">/ {{ sessionData.maxRounds * 1000 }}</span>
@@ -818,13 +822,53 @@ function animateValue(target, from, to, duration) {
 }
 .sum-card h2 { font-size: 34px; font-weight: 700; letter-spacing: .5px; margin-bottom: 4px; }
 .sum-rank {
+  border: 1px solid;
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  text-align: center;
+  transition: box-shadow 0.3s ease;
+}
+.sum-rank .rank-label {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.sum-rank .rank-name {
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--amber);
-  margin-bottom: 24px;
+  margin-bottom: 6px;
 }
+.sum-rank .rank-flavor {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.rank-scout {
+  border-color: rgba(111, 138, 122, 0.3);
+}
+.rank-scout .rank-name { color: var(--muted); }
+.rank-odst {
+  border-color: rgba(79, 224, 138, 0.35);
+  box-shadow: 0 0 16px rgba(79, 224, 138, 0.1);
+}
+.rank-odst .rank-name { color: var(--green); }
+.rank-spartan {
+  border-color: rgba(91, 179, 255, 0.35);
+  box-shadow: 0 0 16px rgba(91, 179, 255, 0.1);
+}
+.rank-spartan .rank-name { color: #5bb3ff; }
+.rank-chief {
+  border-color: rgba(242, 180, 65, 0.45);
+  box-shadow: 0 0 22px rgba(242, 180, 65, 0.18);
+}
+.rank-chief .rank-name { color: var(--amber); }
 .sum-total {
   display: flex;
   align-items: baseline;

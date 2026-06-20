@@ -47,12 +47,16 @@ export function useGameSession({ onImagesReady, onScreenshotChange } = {}) {
     return Math.max(0, 100 * (1 - Math.pow((distance - perfectRadius) / (maxDistance - perfectRadius), 2)))
   })
 
+  const RANKS = [
+    { threshold: 0.85, name: 'MASTER CHIEF', flavor: 'Finish the fight. You always do.', cls: 'chief' },
+    { threshold: 0.60, name: 'SPARTAN-II',   flavor: 'Enhanced. Battle-hardened. Lethal.', cls: 'spartan' },
+    { threshold: 0.35, name: 'ODST TROOPER', flavor: 'Hell dropped in. Good work.', cls: 'odst' },
+    { threshold: 0,    name: 'FIELD SCOUT',  flavor: 'The battlefield awaits, soldier.', cls: 'scout' },
+  ]
+
   const rank = computed(() => {
     const pct = totalScore.value / (sessionData.value.maxRounds * 1000)
-    if (pct > 0.85) return 'MASTER CHIEF'
-    if (pct > 0.6) return 'SPARTAN-II'
-    if (pct > 0.35) return 'ODST TROOPER'
-    return 'FIELD SCOUT'
+    return RANKS.find(r => pct > r.threshold) ?? RANKS[RANKS.length - 1]
   })
 
   const gameState = computed(() => {
