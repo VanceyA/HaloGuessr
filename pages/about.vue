@@ -96,7 +96,7 @@
               // DISCORD
             </div>
             <div class="dc-handle">Join the server</div>
-            <div class="dc-action mono">discord.gg/x5RTwAag2K →</div>
+            <div class="dc-action mono">Open Discord →</div>
           </a>
         </div>
       </div>
