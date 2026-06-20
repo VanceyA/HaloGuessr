@@ -1,73 +1,57 @@
 <template>
-  <div class="relative w-full h-full">
+  <div class="map-root">
     <img
       :src="mapPath"
       alt="Halo Map"
       ref="mapImage"
-      class="w-full h-auto object-contain"
-      @click="handleClick"
+      class="map-img"
       :class="{
-        'cursor-not-allowed': disabled && !guess,
-        'cursor-default': disabled && guess
+        'disabled-empty': disabled && !guess,
+        'disabled-guessed': disabled && guess,
       }"
+      @click="handleClick"
       @load="handleMapLoaded"
     />
 
-    <!-- Guess Marker -->
+    <!-- Guess marker -->
     <div
       v-if="guess"
-      class="absolute guess-marker z-10"
+      class="marker"
       :style="guessStyle"
       :data-x="guess.x"
       :data-y="guess.y"
     >
-      <!-- Changed w-5 h-5 to w-3 h-3 -->
-      <div class="w-3 h-3 rounded-full flex items-center justify-center">
-        <div
-          class="w-full h-full animate-ping absolute rounded-full opacity-70"
-          :class="isUpload ? 'bg-blue-400' : 'bg-red-500'"
-        ></div>
-        <div
-          class="w-full h-full rounded-full"
-          :class="isUpload ? 'bg-blue-400' : 'bg-red-500'"
-        ></div>
-        <!-- Changed w-1.5 h-1.5 to w-1 h-1 -->
-        <div
-          class="absolute -translate-x-1/2 -translate-y-1/2 w-1 h-1 bg-white rounded-full"
-        ></div>
+      <div class="marker-dot">
+        <div class="marker-ping" :class="isUpload ? 'upload' : 'guess'"></div>
+        <div class="marker-fill" :class="isUpload ? 'upload' : 'guess'"></div>
+        <div class="marker-center"></div>
       </div>
     </div>
 
-    <!-- Correct Location Marker -->
+    <!-- Correct location marker -->
     <div
       v-if="correctLocation && !isUpload"
-      class="absolute z-10"
+      class="marker"
       :style="correctLocationStyle"
     >
-      <!-- Changed w-5 h-5 to w-3 h-3 -->
-      <div class="w-3 h-3 rounded-full flex items-center justify-center">
-        <div
-          class="w-full h-full animate-ping absolute rounded-full opacity-70 bg-halo-green"
-        ></div>
-        <div class="w-full h-full rounded-full bg-halo-green"></div>
-        <!-- Changed w-1.5 h-1.5 to w-1 h-1 -->
-        <div
-          class="absolute -translate-x-1/2 -translate-y-1/2 w-1 h-1 bg-white rounded-full"
-        ></div>
+      <div class="marker-dot">
+        <div class="marker-ping correct"></div>
+        <div class="marker-fill correct"></div>
+        <div class="marker-center"></div>
       </div>
     </div>
 
-    <!-- Distance Line -->
+    <!-- Distance line -->
     <div
       v-if="guess && correctLocation && !isUpload"
-      class="absolute pointer-events-none"
+      class="dist-line"
       :style="lineStyle"
     ></div>
 
-    <!-- Distance Label -->
+    <!-- Distance label -->
     <div
       v-if="guess && correctLocation && !isUpload"
-      class="absolute pointer-events-none text-xs bg-black/80 text-white px-1.5 py-0.5 rounded transform -translate-x-1/2 -translate-y-1/2"
+      class="dist-label"
       :style="distanceLabelStyle"
     >
       {{ calculateDistance().toFixed(0) }}%
@@ -92,13 +76,10 @@ const guess = ref(null)
 const mapSize = ref({ width: 0, height: 0 })
 let resizeObserver = null
 
-// Reset guess when the mapPath changes
 watch(
   () => props.mapPath,
   () => {
-    if (!props.initialMarker) {
-      guess.value = null
-    }
+    if (!props.initialMarker) guess.value = null
   },
   { immediate: true }
 )
@@ -126,15 +107,11 @@ onMounted(() => {
   })
   if (mapImage.value) resizeObserver.observe(mapImage.value)
 
-  // If there's an initial marker (e.g. on mount), set it once image is ready
   if (!props.initialMarker) return
   const img = mapImage.value
   const setIt = () => {
     nextTick(() => {
-      guess.value = {
-        x: props.initialMarker.x,
-        y: props.initialMarker.y
-      }
+      guess.value = { x: props.initialMarker.x, y: props.initialMarker.y }
       emit('select', guess.value)
     })
   }
@@ -147,23 +124,17 @@ onUnmounted(() => {
 
 const guessStyle = computed(() => {
   if (!guess.value || !mapSize.value.width) return {}
-  const pixelX = (guess.value.x / 100) * mapSize.value.width
-  const pixelY = (guess.value.y / 100) * mapSize.value.height
   return {
-    left: `${pixelX}px`,
-    top: `${pixelY}px`,
-    transform: 'translate(-50%, -50%)'
+    left: `${(guess.value.x / 100) * mapSize.value.width}px`,
+    top: `${(guess.value.y / 100) * mapSize.value.height}px`,
   }
 })
 
 const correctLocationStyle = computed(() => {
   if (!props.correctLocation || !mapSize.value.width) return {}
-  const pixelX = (props.correctLocation.x / 100) * mapSize.value.width
-  const pixelY = (props.correctLocation.y / 100) * mapSize.value.height
   return {
-    left: `${pixelX}px`,
-    top: `${pixelY}px`,
-    transform: 'translate(-50%, -50%)'
+    left: `${(props.correctLocation.x / 100) * mapSize.value.width}px`,
+    top: `${(props.correctLocation.y / 100) * mapSize.value.height}px`,
   }
 })
 
@@ -179,11 +150,8 @@ const lineStyle = computed(() => {
     left: `${x1}px`,
     top: `${y1}px`,
     width: `${length}px`,
-    height: '2px',
-    background:
-      'linear-gradient(to right, rgba(220, 38, 38, 0.8), rgba(123, 244, 66, 0.8))',
     transform: `rotate(${angle}deg)`,
-    transformOrigin: '0 0'
+    transformOrigin: '0 0',
   }
 })
 
@@ -193,11 +161,9 @@ const distanceLabelStyle = computed(() => {
   const y1 = (guess.value.y / 100) * mapSize.value.height
   const x2 = (props.correctLocation.x / 100) * mapSize.value.width
   const y2 = (props.correctLocation.y / 100) * mapSize.value.height
-  const midX = (x1 + x2) / 2
-  const midY = (y1 + y2) / 2
   return {
-    left: `${midX}px`,
-    top: `${midY}px`
+    left: `${(x1 + x2) / 2}px`,
+    top: `${(y1 + y2) / 2}px`,
   }
 })
 
@@ -209,3 +175,99 @@ const calculateDistance = () => {
   )
 }
 </script>
+
+<style scoped>
+.map-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.map-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  cursor: crosshair;
+}
+.map-img.disabled-empty  { cursor: not-allowed; }
+.map-img.disabled-guessed { cursor: default; }
+
+/* ── Markers ───────────────────────────────────────────── */
+.marker {
+  position: absolute;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+}
+
+.marker-dot {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.marker-ping {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0.7;
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.marker-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.marker-center {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 4px;
+  background: #fff;
+  border-radius: 50%;
+}
+
+/* Guess marker: red in play mode, blue in upload mode */
+.marker-ping.guess,
+.marker-fill.guess  { background: #ef4444; }
+.marker-ping.upload,
+.marker-fill.upload { background: #60a5fa; }
+
+/* Correct-location marker: halo green */
+.marker-ping.correct,
+.marker-fill.correct { background: #4fe08a; }
+
+/* ── Distance line ─────────────────────────────────────── */
+.dist-line {
+  position: absolute;
+  height: 2px;
+  background: linear-gradient(to right, rgba(220, 38, 38, 0.8), rgba(123, 244, 66, 0.8));
+  pointer-events: none;
+}
+
+/* ── Distance label ────────────────────────────────────── */
+.dist-label {
+  position: absolute;
+  pointer-events: none;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+</style>

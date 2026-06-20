@@ -136,7 +136,7 @@
           v-if="gameState === 'active'"
           class="confirm"
           :disabled="!pendingGuess || hasGuessed"
-          @click="confirmGuess"
+          @click="handleConfirmGuess"
         >
           <template v-if="hasGuessed">Analyzing...</template>
           <template v-else-if="pendingGuess">Confirm Location</template>
@@ -160,7 +160,7 @@
             </div>
           </div>
           <div class="res-meter"><i :style="{ width: accuracy.toFixed(0) + '%' }"></i></div>
-          <button class="next" @click="nextScreenshot">
+          <button class="next" @click="handleNextScreenshot">
             {{ isLastRound ? 'View Debrief' : 'Next Round' }}
           </button>
         </div>
@@ -194,7 +194,7 @@
             </div>
           </div>
           <div class="sum-cta">
-            <button class="again" @click="playAgain">Play Again</button>
+            <button class="again" @click="exitSession">Play Again</button>
             <button class="home" @click="exitSession">Home</button>
           </div>
         </div>
@@ -211,335 +211,121 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import MapCanvas from '~/components/MapCanvas.vue';
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import MapCanvas from '~/components/MapCanvas.vue'
 
-useSeoMeta({ robots: 'noindex, nofollow' });
-useHead({ title: 'Playing' });
+useSeoMeta({ robots: 'noindex, nofollow' })
+useHead({ title: 'Playing' })
 
-const route = useRoute();
-const router = useRouter();
+const route = useRoute()
+const router = useRouter()
 
-// Lock body scroll for immersive layout
-onMounted(() => { document.body.style.overflow = 'hidden'; });
-onUnmounted(() => { document.body.style.overflow = ''; });
+// ── UI state ──────────────────────────────────────────────
+const showModInfo = ref(false)
+const isMac = ref(false)
+const summaryDisplayScore = ref(0)
+const sheetFull = ref(false)
+const showTimeoutOverlay = ref(false)
+let touchStartY = 0
 
-// --- Core state ---
-const screenshot = ref(null);
-const result = ref(null);
-const score = ref(0);
-const hasGuessed = ref(false);
-const isLoadingInitial = ref(true);
-const isLoadingNextLevel = ref(false);
-const screenshotLoaded = ref(false);
-const mapLoaded = ref(false);
-const pendingGuess = ref(null);
-const showModInfo = ref(false);
-const isMac = ref(false);
-const showSummary = ref(false);
-const summaryDisplayScore = ref(0);
-const sheetFull = ref(false);
-let touchStartY = 0;
+// ── Timer ─────────────────────────────────────────────────
+const { timeLeft, formattedTimeLeft, start: startTimer, stop: stopTimer } = useRoundTimer({
+  onTimeout() {
+    if (hasGuessed.value) return
+    showTimeoutOverlay.value = true
+    pendingGuess.value = null
+    nextTick(() => confirmGuess())
+  },
+})
 
-// Session state
-const activeSession = ref(null);
-const sessionData = ref({ currentRound: 0, maxRounds: 5, totalScore: 0 });
-const sessionRounds = ref([]);
-const sessionComplete = ref(false);
-const sessionSettings = ref(null);
+// ── Game session ──────────────────────────────────────────
+const {
+  screenshot, result, hasGuessed,
+  isLoadingInitial, isLoadingNextLevel,
+  dockIsLoading, screenshotLoaded, mapLoaded,
+  pendingGuess, showSummary,
+  activeSession, sessionData, sessionRounds, sessionComplete,
+  roundTimeLimit,
+  totalScore, isLastRound, accuracy, rank, gameState,
+  loadSession, confirmGuess, nextScreenshot, initQuickPlay,
+} = useGameSession({
+  onImagesReady(limit) {
+    if (limit > 0 && !hasGuessed.value && !sessionComplete.value) startTimer(limit)
+  },
+  onScreenshotChange() {
+    stopTimer()
+    showTimeoutOverlay.value = false
+  },
+})
 
-// Timer state
-const roundTimeLimit = ref(0);
-const timeLeft = ref(0);
-const timerIntervalId = ref(null);
-const showTimeoutOverlay = ref(false);
+// Clear timeout overlay when the API result arrives
+watch(result, (v) => { if (v) showTimeoutOverlay.value = false })
 
-// --- Computed ---
-const imagesLoaded = computed(() => screenshotLoaded.value && mapLoaded.value);
-
-const dockIsLoading = computed(() => isLoadingInitial.value || !imagesLoaded.value);
-
-const totalScore = computed(() =>
-  activeSession.value ? sessionData.value.totalScore : score.value
-);
-
-const gameState = computed(() => {
-  if (showSummary.value) return 'summary';
-  if (!screenshot.value || isLoadingInitial.value) return 'loading';
-  if (result.value) return 'result';
-  return 'active';
-});
-
-const isLastRound = computed(() => {
-  const max = sessionData.value.maxRounds;
-  return max > 0 && sessionData.value.currentRound >= max;
-});
-
-const accuracy = computed(() => {
-  if (!result.value?.correctLocation || !pendingGuess.value) return 0;
-  const dx = pendingGuess.value.x - result.value.correctLocation.x;
-  const dy = pendingGuess.value.y - result.value.correctLocation.y;
-  const distance = Math.hypot(dx, dy);
-  const perfectRadius = 3;
-  const maxDistance = 50;
-  if (distance <= perfectRadius) return 100;
-  if (distance > maxDistance) return 0;
-  return Math.max(0, 100 * (1 - Math.pow((distance - perfectRadius) / (maxDistance - perfectRadius), 1.5)));
-});
-
-const rank = computed(() => {
-  const pct = totalScore.value / (sessionData.value.maxRounds * 1000);
-  if (pct > 0.85) return 'MASTER CHIEF';
-  if (pct > 0.6) return 'SPARTAN-II';
-  if (pct > 0.35) return 'ODST TROOPER';
-  return 'FIELD SCOUT';
-});
-
-const formattedTimeLeft = computed(() => {
-  const m = Math.floor(timeLeft.value / 60);
-  const s = timeLeft.value % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-});
-
-function pipClass(i) {
-  if (i < sessionData.value.currentRound) return 'done';
-  if (i === sessionData.value.currentRound) return gameState.value !== 'active' ? 'done' : 'cur';
-  return '';
-}
-
-// --- Watchers ---
-watch(screenshot, () => {
-  screenshotLoaded.value = false;
-  mapLoaded.value = false;
-  pendingGuess.value = null;
-  result.value = null;
-  showTimeoutOverlay.value = false;
-});
-
-watch(imagesLoaded, (loaded) => {
-  if (loaded) {
-    isLoadingNextLevel.value = false;
-    isLoadingInitial.value = false;
-    if (roundTimeLimit.value > 0 && !hasGuessed.value && !sessionComplete.value) {
-      startRoundTimer();
-    }
-  }
-});
-
+// UI reactions to game state changes
 watch(gameState, (state) => {
-  if (state === 'summary') animateValue(summaryDisplayScore, 0, totalScore.value, 1100);
-  if (state === 'result') sheetFull.value = true;
-  if (state === 'active') sheetFull.value = false;
-});
+  if (state === 'summary') animateValue(summaryDisplayScore, 0, totalScore.value, 1100)
+  if (state === 'result') sheetFull.value = true
+  if (state === 'active') sheetFull.value = false
+})
 
-// --- Lifecycle ---
+// ── Lifecycle ─────────────────────────────────────────────
 onMounted(() => {
-  const sessionId = route.query.session;
-  if (sessionId) {
-    activeSession.value = sessionId;
-    loadSession(sessionId);
-  } else {
-    sessionData.value = { currentRound: 0, maxRounds: 5, totalScore: 0 };
-    sessionRounds.value = [];
-    score.value = 0;
-    sessionComplete.value = false;
-    showSummary.value = false;
-    roundTimeLimit.value = 0;
-    fetchScreenshot();
-  }
-  isMac.value = typeof navigator !== 'undefined'
-    && navigator.platform.toUpperCase().includes('MAC');
-  window.addEventListener('keydown', handleKeyDown);
-});
+  document.body.style.overflow = 'hidden'
+  const sessionId = route.query.session
+  if (sessionId) loadSession(sessionId)
+  else initQuickPlay()
+  isMac.value = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC')
+  window.addEventListener('keydown', handleKeyDown)
+})
 
 onUnmounted(() => {
-  stopRoundTimer();
-  window.removeEventListener('keydown', handleKeyDown);
-});
+  document.body.style.overflow = ''
+  stopTimer()
+  window.removeEventListener('keydown', handleKeyDown)
+})
 
-// --- Timer ---
-function startRoundTimer() {
-  stopRoundTimer();
-  if (roundTimeLimit.value <= 0 || hasGuessed.value) return;
-  timeLeft.value = roundTimeLimit.value;
-  timerIntervalId.value = setInterval(() => {
-    timeLeft.value--;
-    if (timeLeft.value <= 0) handleTimeout();
-  }, 1000);
+// ── Actions ───────────────────────────────────────────────
+function handleConfirmGuess() { stopTimer(); confirmGuess() }
+function handleNextScreenshot() { stopTimer(); nextScreenshot() }
+function exitSession() { stopTimer(); router.push('/') }
+
+function pipClass(i) {
+  if (i < sessionData.value.currentRound) return 'done'
+  if (i === sessionData.value.currentRound) return gameState.value !== 'active' ? 'done' : 'cur'
+  return ''
 }
-
-function stopRoundTimer() {
-  if (timerIntervalId.value) {
-    clearInterval(timerIntervalId.value);
-    timerIntervalId.value = null;
-  }
-}
-
-function handleTimeout() {
-  stopRoundTimer();
-  if (hasGuessed.value) return;
-  showTimeoutOverlay.value = true;
-  pendingGuess.value = null;
-  nextTick(() => confirmGuess());
-}
-
-// --- API calls ---
-async function loadSession(sessionId) {
-  isLoadingInitial.value = true;
-  sessionComplete.value = false;
-  stopRoundTimer();
-  try {
-    const res = await fetch(`/api/sessions/${sessionId}`);
-    const data = await res.json();
-    if (data.error) { router.push('/'); return; }
-    sessionSettings.value = data.settings;
-    sessionData.value = {
-      currentRound: data.currentRound,
-      maxRounds: data.maxRounds,
-      totalScore: data.totalScore,
-    };
-    sessionRounds.value = data.rounds || [];
-    roundTimeLimit.value = parseInt(data.settings?.timeLimit, 10) || 0;
-    if (data.isComplete) {
-      sessionComplete.value = true;
-      showSummary.value = true;
-      isLoadingInitial.value = false;
-    } else {
-      fetchScreenshot(sessionId);
-    }
-  } catch {
-    router.push('/');
-    isLoadingInitial.value = false;
-  }
-}
-
-async function fetchScreenshot(sessionId = null) {
-  if (!isLoadingInitial.value) isLoadingNextLevel.value = true;
-  hasGuessed.value = false;
-  stopRoundTimer();
-  screenshotLoaded.value = false;
-  mapLoaded.value = false;
-  try {
-    const endpoint = sessionId
-      ? `/api/levels/random?sessionId=${sessionId}`
-      : '/api/levels/random';
-    const res = await fetch(endpoint);
-    const data = await res.json();
-    if (data.error) {
-      isLoadingInitial.value = false;
-      isLoadingNextLevel.value = false;
-      if (sessionId && data.sessionComplete) { showSummary.value = true; return; }
-      if (!sessionId && sessionData.value.currentRound > 0) {
-        sessionComplete.value = true;
-        sessionData.value.totalScore = score.value;
-        showSummary.value = true;
-      } else { router.push('/'); }
-      return;
-    }
-    screenshot.value = data;
-    if (data.sessionData) {
-      roundTimeLimit.value = parseInt(data.sessionData.timeLimit, 10) || 0;
-      if (sessionId) {
-        sessionData.value.currentRound = data.sessionData.currentRound;
-        sessionData.value.maxRounds = data.sessionData.maxRounds;
-      } else {
-        sessionData.value.currentRound++;
-      }
-    } else {
-      roundTimeLimit.value = 0;
-      if (!sessionId) sessionData.value.currentRound++;
-    }
-  } catch {
-    isLoadingInitial.value = false;
-    isLoadingNextLevel.value = false;
-    router.push('/');
-  }
-}
-
-async function confirmGuess() {
-  if (hasGuessed.value) return;
-  stopRoundTimer();
-  hasGuessed.value = true;
-  try {
-    const body = { id: screenshot.value.id, guess: pendingGuess.value };
-    if (activeSession.value) body.sessionId = activeSession.value;
-    const res = await fetch('/api/guess', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (data.error) { hasGuessed.value = false; return; }
-    result.value = data;
-    showTimeoutOverlay.value = false;
-    const roundEntry = {
-      round_number: sessionData.value.currentRound,
-      score: data.score,
-      level_id: screenshot.value.id,
-      mapName: screenshot.value.maps?.name || data.mapName || '',
-    };
-    if (activeSession.value && data.sessionData) {
-      sessionData.value = {
-        currentRound: data.sessionData.currentRound,
-        maxRounds: data.sessionData.maxRounds,
-        totalScore: data.sessionData.totalScore,
-      };
-      sessionRounds.value.push(roundEntry);
-      if (data.sessionData.isComplete) sessionComplete.value = true;
-    } else if (!activeSession.value) {
-      score.value += data.score;
-      sessionRounds.value.push(roundEntry);
-      if (sessionData.value.currentRound >= sessionData.value.maxRounds) {
-        sessionComplete.value = true;
-        sessionData.value.totalScore = score.value;
-      }
-    }
-  } catch { hasGuessed.value = false; }
-}
-
-// --- Actions ---
-function nextScreenshot() {
-  stopRoundTimer();
-  if (sessionComplete.value) { showSummary.value = true; return; }
-  result.value = null;
-  pendingGuess.value = null;
-  showTimeoutOverlay.value = false;
-  fetchScreenshot(activeSession.value);
-}
-
-function exitSession() { stopRoundTimer(); router.push('/'); }
-function playAgain() { stopRoundTimer(); router.push('/'); }
-
-function onScreenshotLoaded() { screenshotLoaded.value = true; }
-function onMapLoaded() { mapLoaded.value = true; }
-function onSelect(coords) { if (!hasGuessed.value) pendingGuess.value = coords; }
 
 function handleKeyDown(e) {
   if ((isMac.value ? e.metaKey : e.ctrlKey) && e.key === 'k') {
-    e.preventDefault();
-    if (screenshot.value) showModInfo.value = !showModInfo.value;
+    e.preventDefault()
+    if (screenshot.value) showModInfo.value = !showModInfo.value
   }
 }
 
-function toggleSheet() { sheetFull.value = !sheetFull.value; }
-function onHandleTouchStart(e) { touchStartY = e.touches[0].clientY; }
+function toggleSheet() { sheetFull.value = !sheetFull.value }
+function onHandleTouchStart(e) { touchStartY = e.touches[0].clientY }
 function onHandleTouchEnd(e) {
-  e.preventDefault(); // prevent the synthetic click from also firing
-  const dy = e.changedTouches[0].clientY - touchStartY;
-  if (Math.abs(dy) < 8) toggleSheet();
-  else sheetFull.value = dy < 0;
+  e.preventDefault()
+  const dy = e.changedTouches[0].clientY - touchStartY
+  if (Math.abs(dy) < 8) toggleSheet()
+  else sheetFull.value = dy < 0
 }
+
+// Bridge DOM/component events to composable refs
+function onScreenshotLoaded() { screenshotLoaded.value = true }
+function onMapLoaded() { mapLoaded.value = true }
+function onSelect(coords) { if (!hasGuessed.value) pendingGuess.value = coords }
 
 function animateValue(target, from, to, duration) {
-  const t0 = performance.now();
-  target.value = from;
+  const t0 = performance.now()
+  target.value = from
   function step(t) {
-    const k = Math.min(1, (t - t0) / duration);
-    target.value = Math.round(to * (1 - Math.pow(1 - k, 3)));
-    if (k < 1) requestAnimationFrame(step);
+    const k = Math.min(1, (t - t0) / duration)
+    target.value = Math.round(to * (1 - Math.pow(1 - k, 3)))
+    if (k < 1) requestAnimationFrame(step)
   }
-  requestAnimationFrame(step);
+  requestAnimationFrame(step)
 }
 </script>
 

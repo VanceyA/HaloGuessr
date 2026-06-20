@@ -105,7 +105,7 @@
         <div class="mb-6">
           <label class="block text-blue-300 mb-2 font-medium">Location on Map</label>
           <div class="rounded-lg overflow-hidden border border-blue-400/50">
-            <MapCanvas :map-path="level.maps?.image_path" :is-upload="true" :initial-marker="level.location" @guess="setCoordinates" />
+            <MapCanvas :map-path="level.maps?.image_path" :is-upload="true" :initial-marker="level.location" @select="setCoordinates" />
           </div>
           <p v-if="level.location" class="mt-2 text-blue-300">
             Selected: X: <span class="text-halo-green">{{ level.location.x.toFixed(0) }}%</span>, 

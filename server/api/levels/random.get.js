@@ -142,9 +142,6 @@ export default defineEventHandler(async (event) => {
         name: level.maps.name,
         image_path: level.maps.image_path
       },
-      // Keep legacy fields for backward compatibility
-      mapPath: level.maps.image_path,
-      mapName: level.maps.name,
     };
 
     // Add session data if applicable

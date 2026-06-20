@@ -104,7 +104,7 @@
             <span class="text-red-300" v-if="!coordinates">*Required</span>
           </label>
           <div class="rounded-lg overflow-hidden border border-blue-400/50">
-            <MapCanvas :map-path="selectedMap.image_path" :is-upload="true" @guess="setCoordinates" />
+            <MapCanvas :map-path="selectedMap.image_path" :is-upload="true" @select="setCoordinates" />
           </div>
           <p v-if="coordinates" class="mt-2 text-blue-300">
             Selected: X: <span class="text-halo-green">{{ coordinates.x.toFixed(0) }}%</span>, 

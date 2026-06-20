@@ -11,11 +11,14 @@ export default defineEventHandler(async (event) => {
 
     const supabase = useSupabase(); // Get Supabase client
 
-    // *** Replace redis.get with Supabase select by ID with maps join ***
     const { data: level, error } = await supabase
-      .from('levels') // Your table name
+      .from('levels')
       .select(`
-        *,
+        id,
+        screenshotPath,
+        levelName,
+        location,
+        map_id,
         maps (
           id,
           name,
@@ -24,9 +27,9 @@ export default defineEventHandler(async (event) => {
           game_mode,
           description
         )
-      `) // Select all columns from levels and related maps data
-      .eq('id', id) // Filter by the level ID
-      .single(); // Expecting exactly one row
+      `)
+      .eq('id', id)
+      .single();
 
     if (error || !level) {
       console.error(`Error fetching level ID ${id}:`, error);

@@ -10,7 +10,8 @@ export default defineEventHandler(async (event) => {
     const { data: levels, error } = await supabase
       .from('levels')
       .select(`
-        *,
+        id,
+        levelName,
         maps (
           id,
           name,
@@ -18,7 +19,7 @@ export default defineEventHandler(async (event) => {
           halo_game,
           game_mode
         )
-      `); // Select levels with joined map data
+      `);
 
     if (error) {
       console.error('Supabase query failed:', error.message)
