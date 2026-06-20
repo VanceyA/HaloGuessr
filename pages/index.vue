@@ -238,23 +238,26 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 useSeoMeta({
-  title: 'Pinpoint Your Location in the Halo Universe',
-  description: 'Drop into random Halo locations and mark exactly where you are. Play across Halo: CE, Halo 2, Halo 3, and more in this fan-made geography guessing game.',
-  ogTitle: 'HaloGuessr – Pinpoint Your Location in the Halo Universe',
-  ogDescription: 'Drop into random Halo locations and mark exactly where you are. Play across Halo: CE, Halo 2, Halo 3, and more in this fan-made geography guessing game.',
+  title: 'The Halo GeoGuessr Game',
+  description: 'HaloGuessr is a free GeoGuessr-style guessing game set in the Halo universe. Drop into random locations from Halo: CE, Halo 2, Halo 3, and more — then pinpoint exactly where you are on the map.',
+  ogTitle: 'HaloGuessr – The Halo GeoGuessr Game',
+  ogDescription: 'Drop into random Halo locations and pinpoint exactly where you are on the map. A free GeoGuessr-style game for Halo fans — play across Halo: CE, Halo 2, Halo 3, and more.',
   ogType: 'website',
   ogUrl: 'https://haloguessr.com',
   ogSiteName: 'HaloGuessr',
   ogImage: 'https://haloguessr.com/og-image.png',
   twitterCard: 'summary_large_image',
-  twitterTitle: 'HaloGuessr – Pinpoint Your Location in the Halo Universe',
-  twitterDescription: 'Drop into random Halo locations and mark exactly where you are. Fan-made geography guessing game.',
+  twitterTitle: 'HaloGuessr – The Halo GeoGuessr Game',
+  twitterDescription: 'A free GeoGuessr-style game set in the Halo universe. Drop into random locations and pinpoint exactly where you are.',
   twitterImage: 'https://haloguessr.com/og-image.png',
   robots: 'index, follow',
 });
 
 useHead({
   link: [{ rel: 'canonical', href: 'https://haloguessr.com' }],
+  meta: [
+    { name: 'keywords', content: 'halo geoguessr, haloguessr, halo guessr, halo geoguesser, halo geography game, halo guessing game, geoguessr halo, halo location game, geoguessr game, halo game geoguessr' },
+  ],
   script: [
     {
       type: 'application/ld+json',
@@ -262,13 +265,15 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'WebApplication',
         name: 'HaloGuessr',
+        alternateName: ['Halo GeoGuessr', 'Halo Geoguessr Game', 'Halo Guessing Game'],
         url: 'https://haloguessr.com',
-        description: 'A fan-made geography guessing game set in the Halo universe. Drop into random locations and pinpoint exactly where you are.',
+        description: 'A free GeoGuessr-style geography guessing game set in the Halo universe. Drop into random locations from Halo: CE, Halo 2, Halo 3, and more — then pinpoint exactly where you are on the map.',
         applicationCategory: 'GameApplication',
-        genre: 'Quiz Game',
+        genre: 'Geography Guessing Game',
         operatingSystem: 'Web',
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
         about: { '@type': 'VideoGameSeries', name: 'Halo' },
+        keywords: 'halo geoguessr, haloguessr, halo guessr, halo geography game, halo guessing game, geoguessr halo, halo location game',
       }),
     },
   ],
