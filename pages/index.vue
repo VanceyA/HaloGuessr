@@ -16,6 +16,7 @@
         <div class="head-right">
           <nav class="nav">
             <a href="#" class="active">Play</a>
+            <NuxtLink to="/about">About</NuxtLink>
           </nav>
           <a href="https://ko-fi.com/haloguessr" target="_blank" rel="noopener noreferrer" class="donate">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 11.5C3 9 1 6.8 1 4.4 1 2.8 2.2 1.7 3.7 1.7c1 0 1.8.5 2.8 1.6 1-1.1 1.8-1.6 2.8-1.6C11.8 1.7 13 2.8 13 4.4c0 2.4-2 4.6-5.5 7.1Z" fill="#07120b"/></svg>
@@ -33,6 +34,7 @@
     <Transition name="drawer">
       <div v-if="menuOpen" class="mob-drawer">
         <a href="#" class="mob-nav-link active" @click="menuOpen = false">Play</a>
+        <NuxtLink to="/about" class="mob-nav-link" @click="menuOpen = false">About</NuxtLink>
         <a href="https://ko-fi.com/haloguessr" target="_blank" rel="noopener noreferrer" class="mob-donate">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 11.5C3 9 1 6.8 1 4.4 1 2.8 2.2 1.7 3.7 1.7c1 0 1.8.5 2.8 1.6 1-1.1 1.8-1.6 2.8-1.6C11.8 1.7 13 2.8 13 4.4c0 2.4-2 4.6-5.5 7.1Z" fill="#07120b"/></svg>
           Donate
@@ -225,7 +227,7 @@
       <div class="wrap foot-row">
         <div class="foot-left"><b>HALOGUESSR</b> // FAN-MADE PROJECT<br/>NOT AFFILIATED WITH OR ENDORSED BY MICROSOFT OR HALO STUDIOS.</div>
         <div class="foot-links">
-          <a href="#">About</a>
+          <NuxtLink to="/about">About</NuxtLink>
           <a href="https://ko-fi.com/haloguessr" target="_blank" rel="noopener noreferrer">Donate</a>
         </div>
       </div>
